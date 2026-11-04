@@ -1,0 +1,55 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.py[cod]
+
+# Виртуальное окружение (проверьте название своей папки!)
+venv/
+.venv/
+env/
+
+# Секреты
+.env
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+*.log
+
+# IDE
+.idea/
+
+# ОС
+.DS_Store
+Thumbs.db
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/venv/
+/venv/
+/theme/static_src/node_modules/
+/theme/static_src/node_modules/
+/theme/static_src/node_modules/

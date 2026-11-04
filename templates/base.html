@@ -1,0 +1,33 @@
+{% load tailwind_tags %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO Мета-теги (позже сделаем их динамическими) -->
+    <title>Новогодние елки с доставкой | Ростов-на-Дону</title>
+    <meta name="description" content="Заказайте живые новогодние елки и сосны с доставкой по Ростову-на-Дону. Большой выбор, свежие деревья.">
+
+    <!-- Tailwind CSS -->
+    {% tailwind_css %}
+
+    <!-- Alpine.js для корзины и интерактива -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="min-h-screen bg-base-100 text-base-content">
+
+    <!-- Тестовый блок, чтобы убедиться, что всё работает -->
+    <div class="hero min-h-screen bg-base-200">
+        <div class="hero-content text-center">
+            <div class="max-w-md">
+                <h1 class="text-5xl font-bold">Hello, Новый Год!</h1>
+                <p class="py-6">Tailwind CSS и DaisyUI успешно подключены. Пора продавать елки!</p>
+                <button class="btn btn-primary">Тестовая кнопка DaisyUI</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
