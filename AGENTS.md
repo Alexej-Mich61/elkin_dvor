@@ -4,9 +4,11 @@
 Интернет-магазин живых новогодних ёлок с доставкой (Ростов-на-Дону). Без онлайн-оплаты:
 посетитель оформляет заказ → клиент и менеджер получают письмо с номером заказа →
 оплата наличными при доставке. В планах: промокоды и акции.
-Стадия: выполнен этап 0 (основа: каркас шаблонов, ru-ru и Europe/Moscow, HTMX,
-переносимый NPM_BIN_PATH, UTF-8 requirements, статика/медиа). Моделей, views, форм
-и своих миграций пока нет; следующий — этап 1.
+Стадия: выполнены этапы 0 (основа: каркас шаблонов, ru-ru и Europe/Moscow, HTMX,
+переносимый NPM_BIN_PATH, UTF-8 requirements, статика/медиа) и 1 (модели каталога
+`Category`, `Product`, `ProductVariant`, `ProductImage`, миграция `shop.0001_initial`,
+настроенный Django Admin, тесты моделей, демоданные). Публичные views и формы
+каталога пока не реализованы; следующий — этап 2.
 
 ## Документация
 - [ROADMAP.md](ROADMAP.md) — порядок этапов, задачи, критерии готовности и текущие отметки выполнения.
@@ -18,7 +20,7 @@
 
 ## Стек
 Python 3.14 · Django 6.1.2 · SQLite · django-tailwind 4.6 (Tailwind CSS 4 + daisyUI 5) ·
-python-dotenv · Alpine.js и HTMX (CDN, подключены в `templates/base.html`).
+python-dotenv · Pillow (обязателен для `ImageField`) · Alpine.js и HTMX (CDN, подключены в `templates/base.html`).
 django-browser-reload — только при `DEBUG=True`.
 
 ## Команды (Windows, venv в ./venv)
@@ -37,7 +39,7 @@ venv/Scripts/python.exe manage.py makemigrations
 venv/Scripts/python.exe manage.py migrate
 
 # тесты
-venv/Scripts/python.exe manage.py test                  # тестов пока нет — команда пустая
+venv/Scripts/python.exe manage.py test                  # тесты моделей каталога (shop)
 
 # проверки; отдельного линтера НЕТ, используем системные чеки Django
 venv/Scripts/python.exe manage.py check
@@ -46,7 +48,7 @@ venv/Scripts/python.exe manage.py check
 
 ## Структура
 - `config/` — пакет проекта: `settings.py`, `urls.py`, `wsgi/asgi.py`. settings-модуль: `config.settings`.
-- `shop/` — приложение магазина (сейчас заготовки: models/views/admin/tests пустые).
+- `shop/` — приложение магазина: модели каталога, админка и тесты реализованы (этап 1); публичные views пока не созданы.
 - `cart/`, `orders/` — целевые приложения по `docs/architecture.md`; пока не созданы.
 - `theme/` — Tailwind-приложение (django-tailwind):
   - `static_src/` — источники: `src/styles.css`, `package.json`; там же `node_modules`;
@@ -64,12 +66,21 @@ venv/Scripts/python.exe manage.py check
 
 ## Маршруты (config/urls.py)
 - `/` — `TemplateView` → `templates/home.html`, name=`home`.
+- `/admin/` — стандартная админка Django.
 - `__reload__/` и раздача `/media/` — подключаются только при `DEBUG=True`.
 
 ## Модели и связи
-Нет (`shop/models.py` пуст). В БД применены только contrib-миграции (auth, admin, sessions).
+Реализованы модели каталога в `shop/models.py` (миграция `shop.0001_initial`):
+- `Category` — slug генерируется из названия при пустом значении (`build_unique_slug`,
+  кириллица сохраняется), есть `sort_order`, `is_active`, SEO-поля.
+- `Product` — FK на категорию с `PROTECT`, несимметричный M2M `related_products` на себя
+  (self-рекомендация запрещена в `clean()`), slug аналогично категории.
+- `ProductVariant` — размер хранится текстовым полем `size` (отдельная модель `Size` не нужна);
+  уникальность `(product, size)` и constraint'ы `price >= 0`, `stock >= 0`.
+- `ProductImage` — `upload_to='products/images/'`, одно основное изображение на товар
+  (conditional UniqueConstraint + проверка в `clean()`), сортировка: основное первым.
 Кастомного user model нет и не планируется — используется стоковый `auth_user`.
-Целевые модели и правила их связей описаны в `docs/architecture.md`; до реализации не считать их существующими.
+Целевые модели заказов и промокодов описаны в `docs/architecture.md` (этапы 4–6), пока не созданы.
 
 ## Договорённости кода
 - Комментарии в коде — на русском, так и продолжаем.
@@ -104,7 +115,7 @@ venv/Scripts/python.exe manage.py check
   в production его нет.
 - Локаль `ru-ru`, зона `Europe/Moscow`; `USE_TZ=True` — в БД время в UTC, показ по Москве.
 - `ALLOWED_HOSTS` читается из `.env`; с `DEBUG=False` без него — ошибки.
-- Линтер не настроен, тестов нет — минимальная проверка: `manage.py check`.
+- Линтер не настроен — минимальная проверка: `manage.py check` и `manage.py test`.
 
 ## Завершение итерации
 - Запустить `manage.py check` и относящиеся к изменениям тесты.

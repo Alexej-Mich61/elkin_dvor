@@ -12,6 +12,7 @@ idna==3.20
 Jinja2==3.1.6
 markdown-it-py==4.2.0
 MarkupSafe==3.0.4
+Pillow==12.2.0
 mdurl==0.1.2
 Pygments==2.21.0
 pytailwindcss==0.4.2
