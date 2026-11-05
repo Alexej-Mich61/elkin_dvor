@@ -63,45 +63,83 @@
         </div>
     </section>
 
-    <!-- 3. Каталог по категориям: вкладки-якоря и секции с товарами -->
-    <section id="catalog" class="bg-base-100">
-        <div class="container mx-auto px-4 pt-14">
-            <nav class="flex flex-wrap justify-center gap-x-8 gap-y-2 pb-4 text-3xl font-black text-base-content/30 sm:text-4xl"
-                 aria-label="Категории каталога">
-                {% for category in tree_categories %}
-                    <a href="#cat-{{ category.slug }}" class="pb-2 transition hover:text-primary">{{ category.name|lower }}</a>
-                {% empty %}
-                    <h1 class="pb-2 text-primary">Каталог</h1>
-                {% endfor %}
-            </nav>
-        </div>
+    <!-- 3. Каталог: вкладки категорий (Alpine) + карусель товаров активной категории.
+           Без JS все панели видны подряд — контент остаётся доступным. -->
+    {% if tree_categories %}
+        <section id="catalog" class="bg-base-100"
+                 x-data="{ activeTab: '{{ tree_categories.0.slug }}' }">
+            <div class="container mx-auto px-4 pt-14">
+                <div class="flex flex-wrap items-center justify-center gap-2 pb-4 md:gap-6">
+                    <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-3xl font-black sm:text-4xl"
+                         role="tablist" aria-label="Категории каталога">
+                        {% for category in tree_categories %}
+                            <button type="button" role="tab" id="tab-{{ category.slug }}"
+                                    aria-controls="panel-{{ category.slug }}"
+                                    :aria-selected="activeTab === '{{ category.slug }}'"
+                                    @click="activeTab = '{{ category.slug }}'"
+                                    class="pb-2 transition hover:text-primary"
+                                    :class="activeTab === '{{ category.slug }}' ? 'text-primary underline decoration-primary decoration-4 underline-offset-8' : 'text-base-content/30'">
+                                {{ category.name|lower }}
+                            </button>
+                        {% endfor %}
+                    </div>
+                    <div class="hidden gap-2 md:flex" x-cloak>
+                        <button type="button" aria-label="Предыдущие товары"
+                                class="btn btn-circle btn-outline btn-primary btn-sm"
+                                @click="$refs['carousel-' + activeTab].scrollBy({ left: -300, behavior: 'smooth' })">
+                            {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
+                        </button>
+                        <button type="button" aria-label="Следующие товары"
+                                class="btn btn-circle btn-outline btn-primary btn-sm"
+                                @click="$refs['carousel-' + activeTab].scrollBy({ left: 300, behavior: 'smooth' })">
+                            {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
+                        </button>
+                    </div>
+                </div>
 
-        {% for category in tree_categories %}
-            <section id="cat-{{ category.slug }}" aria-label="{{ category.name }}" class="scroll-mt-24">
-                <div class="container mx-auto px-4 pb-14">
-                    <h2 class="sr-only">{{ category.name }}</h2>
-                    <div class="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:snap-none lg:overflow-visible">
+                {% for category in tree_categories %}
+                    <div id="panel-{{ category.slug }}" role="tabpanel" aria-labelledby="tab-{{ category.slug }}"
+                         x-show="activeTab === '{{ category.slug }}'"
+                         x-ref="carousel-{{ category.slug }}"
+                         class="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
                         {% for product in category.products.all %}
                             {% include 'partials/product_card.html' %}
                         {% endfor %}
                     </div>
-                    <p class="mt-1">
+                    <p class="mt-1" x-show="activeTab === '{{ category.slug }}'">
                         <a href="{% url 'shop:category' category_slug=category.slug %}"
                            class="font-bold text-primary underline-offset-4 hover:underline">
                             Все товары категории «{{ category.name }}» →
                         </a>
                     </p>
-                </div>
-            </section>
-        {% endfor %}
-    </section>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
 
-    <!-- 4. Популярные дополнения (подставки, украшения и т.п.) -->
+    <!-- 4. Популярные дополнения (подставки, украшения и т.п.) — тоже каруселью -->
     {% if addon_products %}
-        <section id="addons" class="border-t border-base-300/60 bg-base-100">
+        <section id="addons" class="border-t border-base-300/60 bg-base-100" x-data>
             <div class="container mx-auto px-4 py-14">
-                <h2 class="text-center text-3xl font-black sm:text-4xl">популярные дополнения</h2>
-                <div class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:snap-none lg:overflow-visible">
+                <div class="flex flex-wrap items-center justify-center gap-2 md:justify-between">
+                    <h2 class="w-full text-center text-3xl font-black sm:text-4xl md:w-auto md:text-left">
+                        популярные дополнения
+                    </h2>
+                    <div class="hidden gap-2 md:flex" x-cloak>
+                        <button type="button" aria-label="Предыдущие дополнения"
+                                class="btn btn-circle btn-outline btn-primary btn-sm"
+                                @click="$refs.addonsCarousel.scrollBy({ left: -300, behavior: 'smooth' })">
+                            {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
+                        </button>
+                        <button type="button" aria-label="Следующие дополнения"
+                                class="btn btn-circle btn-outline btn-primary btn-sm"
+                                @click="$refs.addonsCarousel.scrollBy({ left: 300, behavior: 'smooth' })">
+                            {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
+                        </button>
+                    </div>
+                </div>
+                <div x-ref="addonsCarousel"
+                     class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
                     {% for product in addon_products %}
                         {% include 'partials/product_card.html' %}
                     {% endfor %}

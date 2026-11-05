@@ -24,7 +24,7 @@
         <div class="container mx-auto px-4 py-10">
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 {% for product in products %}
-                    {% include 'partials/product_card.html' %}
+                    {% include 'partials/product_card.html' with card_class='w-full' %}
                 {% empty %}
                     <p class="col-span-full text-base-content/60">В этой категории пока нет товаров.</p>
                 {% endfor %}

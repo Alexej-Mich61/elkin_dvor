@@ -1,5 +1,5 @@
 {% load shop_extras %}
-<article class="w-60 shrink-0 snap-start scroll-mt-24 sm:w-64 lg:w-auto">
+<article class="{{ card_class|default:'w-60 sm:w-64' }} shrink-0 snap-start scroll-mt-24">
     <a href="{% url 'shop:product' category_slug=product.category.slug product_slug=product.slug %}"
        class="group flex h-full flex-col">
         <div class="overflow-hidden rounded-xl bg-white shadow-sm">

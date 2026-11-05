@@ -149,6 +149,18 @@ class PublicCatalogTests(TestCase):
         self.assertContains(response, "Сосна обыкновенная")
         self.assertContains(response, "3 900–4 900 руб.")
 
+    def test_home_catalog_tabs_with_first_category_default(self):
+        Category.objects.create(name="Ели")
+        response = self.client.get(reverse("shop:home"))
+
+        # Вкладки категорий — кнопки с role="tab"...
+        self.assertContains(response, 'role="tablist"')
+        self.assertContains(response, 'role="tab"')
+        # ...первая по счёту категория выбрана по умолчанию (activeTab в Alpine)...
+        self.assertContains(response, "activeTab: 'сосны'")
+        # ...и ссылка на страницу категории остаётся доступной.
+        self.assertContains(response, 'Все товары категории «Сосны»')
+
     def test_home_hides_inactive_records(self):
         # Неактивные товар, категория и вариант не должны попасть на главную.
         Category.objects.create(name="Скрытые", is_active=False)
