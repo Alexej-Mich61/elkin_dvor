@@ -27,15 +27,20 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Сторонние пакеты
     'tailwind',  # Утилиты Tailwind для Django
-    'django_browser_reload',  # Автообновление страницы в браузере при разработке
     # Наши приложения
     'theme',  # Стили Tailwind
     'shop', # <--- приложение магазина
 ]
 
+# Dev-only приложения подключаем только при DEBUG, не попадают в production
+if DEBUG:
+    INSTALLED_APPS += ['django_browser_reload']  # Автообновление страницы в браузере при разработке
+
 # Настройка Tailwind
 TAILWIND_APP_NAME = 'theme'
-NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"  # <--- путь к nodejs прописываем вручную
+# Путь к npm: из окружения; по умолчанию npm ищется в PATH.
+# На Windows нужен именно npm.cmd: django-tailwind запускает его через subprocess без shell.
+NPM_BIN_PATH = os.getenv('NPM_BIN_PATH', 'npm.cmd' if os.name == 'nt' else 'npm')
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -45,8 +50,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'django_browser_reload.middleware.BrowserReloadMiddleware',
 ]
+
+if DEBUG:
+    MIDDLEWARE += ['django_browser_reload.middleware.BrowserReloadMiddleware']
 
 ROOT_URLCONF = "config.urls"
 
@@ -92,9 +99,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ru-ru"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -104,6 +111,11 @@ USE_TZ = True
 # Настройка статики
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static'] # Папка для наших JS и картинок
+STATIC_ROOT = BASE_DIR / 'staticfiles' # Целевая папка collectstatic при развёртывании
+
+# Медиа: загружаемые файлы (изображения товаров и т.п.)
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Email

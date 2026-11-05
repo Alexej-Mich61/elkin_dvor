@@ -1,33 +1,30 @@
 {% load tailwind_tags %}
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- SEO Мета-теги (позже сделаем их динамическими) -->
-    <title>Новогодние елки с доставкой | Ростов-на-Дону</title>
-    <meta name="description" content="Заказайте живые новогодние елки и сосны с доставкой по Ростову-на-Дону. Большой выбор, свежие деревья.">
+    <!-- SEO Мета-теги (внутренние страницы переопределяют блоки title и meta) -->
+    <title>{% block title %}Новогодние елки с доставкой | Ростов-на-Дону{% endblock %}</title>
+    {% block meta %}{% endblock %}
 
     <!-- Tailwind CSS -->
     {% tailwind_css %}
 
-    <!-- Alpine.js для корзины и интерактива -->
+    <!-- Alpine.js — локальное UI-состояние; HTMX — серверные действия -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
 </head>
-<body class="min-h-screen bg-base-100 text-base-content">
+<body class="min-h-screen bg-base-100 text-base-content flex flex-col">
 
-    <!-- Тестовый блок, чтобы убедиться, что всё работает -->
-    <div class="hero min-h-screen bg-base-200">
-        <div class="hero-content text-center">
-            <div class="max-w-md">
-                <h1 class="text-5xl font-bold">Hello, Новый Год!</h1>
-                <p class="py-6">Tailwind CSS и DaisyUI успешно подключены. Пора продавать елки!</p>
-                <button class="btn btn-primary">Тестовая кнопка DaisyUI</button>
-            </div>
-        </div>
-    </div>
+    {% include 'includes/header.html' %}
+
+    <main class="flex-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include 'includes/footer.html' %}
 
 </body>
 </html>

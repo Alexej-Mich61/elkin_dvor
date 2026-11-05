@@ -7,7 +7,7 @@
 - на сайте будет промокод
 
 
-- Вместо runserver во время верстки мы будем использовать эту команду. 
-- Она параллельно запускает Django-сервер и компилятор Tailwind
-- `python manage.py tailwind start`
+- Во время верстки запускаем два терминала:
+  - `python manage.py tailwind start` — компилятор Tailwind (watch)
+  - `python manage.py runserver` — Django-сервер
 - http://127.0.0.1:8000/

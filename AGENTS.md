@@ -1,24 +1,36 @@
-# AGENTS.md — память для сессий
+# AGENTS.md — инструкции и контекст для ИИ-агентов
 
 ## Что это
 Интернет-магазин живых новогодних ёлок с доставкой (Ростов-на-Дону). Без онлайн-оплаты:
 посетитель оформляет заказ → клиент и менеджер получают письмо с номером заказа →
 оплата наличными при доставке. В планах: промокоды и акции.
-Стадия: заготовка — моделей, views, форм и своих миграций пока нет.
+Стадия: выполнен этап 0 (основа: каркас шаблонов, ru-ru и Europe/Moscow, HTMX,
+переносимый NPM_BIN_PATH, UTF-8 requirements, статика/медиа). Моделей, views, форм
+и своих миграций пока нет; следующий — этап 1.
+
+## Документация
+- [ROADMAP.md](ROADMAP.md) — порядок этапов, задачи, критерии готовности и текущие отметки выполнения.
+- [docs/architecture.md](docs/architecture.md) — целевая архитектура, модели, инварианты, оформление заказа, почтовая очередь и правила безопасности.
+
+Перед началом этапа читать оба документа. Не считать описанную там целевую функциональность уже реализованной.
+После изменения плана обновлять `ROADMAP.md`; после изменения архитектурных решений — `docs/architecture.md`.
+Этот файл содержит только актуальный рабочий контекст, команды и договорённости, не историю сессий.
 
 ## Стек
 Python 3.14 · Django 6.1.2 · SQLite · django-tailwind 4.6 (Tailwind CSS 4 + daisyUI 5) ·
-django-browser-reload · python-dotenv · Alpine.js (CDN, подключён в base.html).
+python-dotenv · Alpine.js и HTMX (CDN, подключены в `templates/base.html`).
+django-browser-reload — только при `DEBUG=True`.
 
 ## Команды (Windows, venv в ./venv)
 ```bash
 # установка зависимостей
 venv/Scripts/pip.exe install -r requirements.txt
 
-# dev-сервер + компилятор Tailwind в одном терминале (основной способ)
-venv/Scripts/python.exe manage.py tailwind start        # http://127.0.0.1:8000/
-# сервер без пересборки стилей
-venv/Scripts/python.exe manage.py runserver
+# dev-режим: два терминала
+# терминал 1 — компилятор Tailwind в режиме watch
+venv/Scripts/python.exe manage.py tailwind start
+# терминал 2 — Django-сервер
+venv/Scripts/python.exe manage.py runserver                     # http://127.0.0.1:8000/
 
 # миграции
 venv/Scripts/python.exe manage.py makemigrations
@@ -35,21 +47,29 @@ venv/Scripts/python.exe manage.py check
 ## Структура
 - `config/` — пакет проекта: `settings.py`, `urls.py`, `wsgi/asgi.py`. settings-модуль: `config.settings`.
 - `shop/` — приложение магазина (сейчас заготовки: models/views/admin/tests пустые).
+- `cart/`, `orders/` — целевые приложения по `docs/architecture.md`; пока не созданы.
 - `theme/` — Tailwind-приложение (django-tailwind):
   - `static_src/` — источники: `src/styles.css`, `package.json`; там же `node_modules`;
   - `static/css/dist/styles.css` — собранный CSS (генерируется, вручную не править).
-- `templates/` — глобальные шаблоны (прописано в `settings.TEMPLATES.DIRS`); `base.html` = каркас сайта и главная.
+- `templates/` — глобальные шаблоны (прописано в `settings.TEMPLATES.DIRS`):
+  - `base.html` — только каркас (head, шапка/подвал через includes, блоки `title`, `meta`, `content`);
+  - `home.html` — главная страница;
+  - `includes/` — повторяющиеся фрагменты (`header.html`, `footer.html`);
+  - `partials/` — HTMX-фрагменты (первые появятся на этапе 3, корзина).
 - `static/` — глобальная статика (`js/` пока пуст, для кастомного JS).
+- `ROADMAP.md` — план разработки и статусы этапов.
+- `docs/architecture.md` — целевые архитектурные договорённости.
 - `.env` — `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` (шаблон — `.env.example`); в git не коммитится.
 - `db.sqlite3` — локальная БД, в git не коммитится.
 
 ## Маршруты (config/urls.py)
-- `/` — `TemplateView` → `templates/base.html`, name=`home`.
-- `__reload__/` — django-browser-reload, только для разработки.
+- `/` — `TemplateView` → `templates/home.html`, name=`home`.
+- `__reload__/` и раздача `/media/` — подключаются только при `DEBUG=True`.
 
 ## Модели и связи
 Нет (`shop/models.py` пуст). В БД применены только contrib-миграции (auth, admin, sessions).
 Кастомного user model нет и не планируется — используется стоковый `auth_user`.
+Целевые модели и правила их связей описаны в `docs/architecture.md`; до реализации не считать их существующими.
 
 ## Договорённости кода
 - Комментарии в коде — на русском, так и продолжаем.
@@ -59,20 +79,37 @@ venv/Scripts/python.exe manage.py check
   не классический `EMAIL_BACKEND`); сейчас стоит `console.EmailBackend` — письма в консоль.
 - Стили: править только `theme/static_src/src/styles.css`; сборку доводить до
   `theme/static/css/dist/` (команды выше). Классы Tailwind/daisyUI — в шаблонах.
-- В `base.html` CSS подключается тегом `{% tailwind_css %}`, JS-интерактив — Alpine.js.
+- В `base.html` CSS подключается тегом `{% tailwind_css %}`, скрипты — Alpine.js и HTMX (CDN).
+- Разделение ответственности: HTMX — серверные действия (размер/цена, корзина, счётчик,
+  промокод, checkout); Alpine.js — только локальное UI-состояние (мобильное меню, модалки,
+  галерея). Alpine не дублирует состояние корзины и цен. Подробности — `docs/architecture.md` §11.
 - Стиль именования — стандартный Django: `snake_case` для файлов/полей, `PascalCase` для классов.
 - После правок моделей: `makemigrations` → `migrate`. Пустые миграции не коммитить без нужды.
 - Новые URL приложений — подключать через `include()` в `config/urls.py`.
+- Цены, скидки и итоги заказа рассчитывать только на сервере; не доверять суммам из браузера.
+- Основной контент и критичные формы строить на серверных шаблонах; HTMX использовать как улучшение, не как обязательное условие SEO.
+- Не добавлять Redis, Celery, отдельный API, приложение `users` и другие новые зависимости без отдельного обоснования.
+- Выполнять работу по одному этапу roadmap; не смешивать её с незапрошенным крупным рефакторингом.
 
 ## Особенности и грабли
-- `NPM_BIN_PATH` в settings жёстко прописан под Windows (`C:\Program Files\nodejs\npm.cmd`) —
-  на другой машине обновить путь. Без Node.js `tailwind start` не работает.
-- `requirements.txt` — в кодировке UTF-16 LE с BOM: pip его читает, но не пересохранять
-  текстовым редактором «вслепую», следить за кодировкой.
-- Два `base.html`: `templates/base.html` (сайт) и `theme/templates/base.html` (демо
-  django-tailwind) — не путать.
-- `django_browser_reload.middleware` включён всегда; `__reload__/` — только dev.
-- `LANGUAGE_CODE = "en-us"`, `TIME_ZONE = "UTC"` при русскоязычном сайте — сознательно
-  отложено, менять при необходимости (отразится на датах/периодах акций).
+- `tailwind start` в django-tailwind 4.6 запускает ТОЛЬКО компилятор Tailwind (watch),
+  Django-сервер не стартует — dev-режим требует двух терминалов (см. команды выше).
+- `NPM_BIN_PATH` берётся из окружения, по умолчанию `npm.cmd` на Windows / `npm` иначе.
+  django-tailwind запускает npm через subprocess без shell, поэтому на Windows нужен
+  именно `npm.cmd`. Нестандартный путь к Node — задать `NPM_BIN_PATH` в `.env`.
+- `requirements.txt` — UTF-8 без BOM (перекодирован из UTF-16); не пересохранять «вслепую».
+- Два `base.html`: `templates/base.html` (каркас сайта) и `theme/templates/base.html`
+  (демо django-tailwind) — не путать.
+- `django_browser_reload` (приложение, middleware, URL) подключается только при `DEBUG=True`;
+  в production его нет.
+- Локаль `ru-ru`, зона `Europe/Moscow`; `USE_TZ=True` — в БД время в UTC, показ по Москве.
 - `ALLOWED_HOSTS` читается из `.env`; с `DEBUG=False` без него — ошибки.
 - Линтер не настроен, тестов нет — минимальная проверка: `manage.py check`.
+
+## Завершение итерации
+- Запустить `manage.py check` и относящиеся к изменениям тесты.
+- Вручную проверить реализованный сценарий, если он имеет пользовательский интерфейс.
+- Просмотреть diff: в нём не должно быть секретов, сгенерированного мусора и незапрошенных изменений.
+- Отметить только действительно проверенные задачи в `ROADMAP.md`.
+- Обновить этот файл при изменении команд, структуры, окружения или договорённостей.
+- Завершать этап отдельным Git-коммитом.
