@@ -25,6 +25,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Для sitemap.xml (sites + sitemaps)
+    "django.contrib.sites",
+    "django.contrib.sitemaps",
     # Сторонние пакеты
     'tailwind',  # Утилиты Tailwind для Django
     # Наши приложения
@@ -57,6 +60,9 @@ if DEBUG:
 
 ROOT_URLCONF = "config.urls"
 
+# Для sitemap.xml: единственный сайт проекта (домен задаётся в админке).
+SITE_ID = 1
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -67,6 +73,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Контакты магазина (телефон, мессенджеры, адрес) для всех страниц
+                "shop.context_processors.contacts",
             ],
         },
     },

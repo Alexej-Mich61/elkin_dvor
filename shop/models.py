@@ -63,6 +63,13 @@ class Category(models.Model):
         default=True,
         db_index=True,
     )
+    # Отличает обычные категории деревьев (сосны, ёлки, пихты) от дополнительных
+    # товаров (подставки, украшения), которые выводятся отдельной секцией на главной.
+    is_addon = models.BooleanField(
+        "Дополнительные товары",
+        default=False,
+        help_text="Показывать товары категории в секции «Популярные дополнения» на главной странице.",
+    )
     seo_title = models.CharField(
         "SEO title",
         max_length=160,

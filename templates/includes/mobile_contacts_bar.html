@@ -1,0 +1,20 @@
+{% comment %}
+  Плавающая панель связи для мобильных: Telegram, звонок, WhatsApp.
+  На десктопе контакты уже есть в шапке и подвале.
+{% endcomment %}
+<div class="fixed bottom-4 right-4 z-40 md:hidden">
+    <div class="flex items-center gap-1 rounded-full bg-white/95 px-2 py-1.5 shadow-lg ring-1 ring-black/10">
+        <a href="{{ SHOP_TELEGRAM_URL }}" target="_blank" rel="noopener" aria-label="Написать в Telegram"
+           class="p-2 text-pine transition hover:text-crimson">
+            {% include 'includes/icon.html' with icon='telegram' class_name='w-6 h-6' %}
+        </a>
+        <a href="tel:{{ SHOP_PHONE_TEL }}" aria-label="Позвонить: {{ SHOP_PHONE_DISPLAY }}"
+           class="p-2 text-pine transition hover:text-crimson">
+            {% include 'includes/icon.html' with icon='phone' class_name='w-6 h-6' %}
+        </a>
+        <a href="{{ SHOP_WHATSAPP_URL }}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"
+           class="p-2 text-pine transition hover:text-crimson">
+            {% include 'includes/icon.html' with icon='whatsapp' class_name='w-6 h-6' %}
+        </a>
+    </div>
+</div>

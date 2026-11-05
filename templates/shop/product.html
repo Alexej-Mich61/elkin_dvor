@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load shop_extras %}
+
+{% block title %}{% if product.seo_title %}{{ product.seo_title }}{% else %}{{ product.name }} — купить в Ростове-на-Дону | Ёлкин двор{% endif %}{% endblock %}
+{% block meta_description %}{% if product.seo_description %}{{ product.seo_description }}{% else %}{{ product.name }} ({{ product.category.name|lower }}) с бесплатной доставкой по Ростову-на-Дону. {% product_price_range product %} Оплата при получении.{% endif %}{% endblock %}
+
+{% block content %}
+    <div class="bg-base-100">
+        <div class="container mx-auto px-4 py-8">
+            <nav aria-label="Хлебные крошки" class="text-sm text-base-content/60">
+                <ol class="flex flex-wrap items-center gap-2">
+                    <li><a href="{% url 'shop:home' %}" class="hover:text-primary">Главная</a></li>
+                    <li aria-hidden="true">/</li>
+                    <li><a href="{% url 'shop:category' category_slug=product.category.slug %}" class="hover:text-primary">{{ product.category.name }}</a></li>
+                    <li aria-hidden="true">/</li>
+                    <li aria-current="page" class="font-bold">{{ product.name }}</li>
+                </ol>
+            </nav>
+
+            <div class="mt-6 grid gap-10 lg:grid-cols-2">
+                <!-- Галерея: Alpine переключает главное фото, без JS видны все фото -->
+                {% if images %}
+                    {% with main_image=images.0 %}
+                        <div x-data="{ active: '{{ main_image.image.url }}' }" class="self-start lg:sticky lg:top-6">
+                            <img :src="active" src="{{ main_image.image.url }}" alt="{{ main_image.alt|default:product.name }}"
+                                 width="800" height="1000" class="aspect-[4/5] w-full rounded-2xl bg-base-200 object-cover">
+                            {% if images|length > 1 %}
+                                <div class="mt-4 flex gap-3">
+                                    {% for image in images %}
+                                        <button type="button" @click="active='{{ image.image.url }}'"
+                                                class="overflow-hidden rounded-lg ring-2 ring-transparent transition hover:opacity-80 focus-visible:ring-primary"
+                                                aria-label="Показать фото {{ forloop.counter }}">
+                                            <img src="{{ image.image.url }}" alt="" width="96" height="120" loading="lazy"
+                                                 class="h-24 w-20 object-cover">
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endwith %}
+                {% else %}
+                    <div class="aspect-[4/5] w-full grid place-items-center rounded-2xl bg-base-200 px-4 text-center font-semibold text-base-content/40">
+                        Фото скоро появится
+                    </div>
+                {% endif %}
+
+                <!-- Описание и выбор варианта -->
+                <div>
+                    <h1 class="text-3xl font-black sm:text-4xl">{{ product.name }}</h1>
+                    <p class="mt-1 font-semibold text-base-content/60">{{ product.category.name }}</p>
+                    {% if product.description %}
+                        <p class="mt-4 leading-relaxed text-base-content/80">{{ product.description }}</p>
+                    {% endif %}
+
+                    {% if variants %}
+                        <fieldset class="mt-6">
+                            <legend class="font-extrabold">Выберите размер</legend>
+                            <div class="mt-3 space-y-3">
+                                {% for variant in variants %}
+                                    <label class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border-2 border-base-300 bg-white px-4 py-3 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                        <span class="flex items-center gap-3">
+                                            <input type="radio" name="variant" value="{{ variant.id }}"
+                                                   class="radio radio-primary"
+                                                   {% if variant == default_variant %}checked{% endif %}
+                                                   hx-get="{% url 'shop:variant_price' category_slug=product.category.slug product_slug=product.slug %}?variant={{ variant.id }}"
+                                                   hx-target="#variant-price" hx-swap="innerHTML">
+                                            <span class="font-bold">{{ variant.size }}</span>
+                                        </span>
+                                        <span class="font-extrabold">{{ variant.price|price }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </fieldset>
+
+                        <div class="mt-6 flex flex-wrap items-center gap-6">
+                            <p id="variant-price" class="text-3xl font-black" aria-live="polite">
+                                {% include 'partials/variant_price.html' with variant=default_variant %}
+                            </p>
+                            <a href="tel:{{ SHOP_PHONE_TEL }}" class="btn btn-primary rounded-full px-8 text-base">
+                                Заказать
+                            </a>
+                        </div>
+                        <p class="mt-3 text-sm text-base-content/60">
+                            Оплата при получении · Бесплатная доставка по Ростову-на-Дону
+                        </p>
+                    {% else %}
+                        <p class="mt-6 rounded-xl bg-base-200 px-4 py-3 font-semibold text-base-content/70">
+                            Сейчас нет доступных размеров — позвоните, и мы подберём дерево: {{ SHOP_PHONE_DISPLAY }}
+                        </p>
+                        <a href="tel:{{ SHOP_PHONE_TEL }}" class="btn btn-primary mt-4 rounded-full px-8 text-base">Позвонить</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Рекомендации: только активные товары активных категорий -->
+            {% if related_products %}
+                <section class="mt-16" aria-label="Рекомендуемые товары">
+                    <h2 class="text-2xl font-black sm:text-3xl">С этим деревом покупают</h2>
+                    <div class="mt-6 flex snap-x gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:overflow-visible">
+                        {% for product in related_products %}
+                            {% include 'partials/product_card.html' %}
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if product_jsonld %}
+        <script type="application/ld+json">{{ product_jsonld|safe }}</script>
+    {% endif %}
+{% endblock %}

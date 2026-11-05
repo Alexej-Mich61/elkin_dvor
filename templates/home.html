@@ -1,20 +1,133 @@
 {% extends 'base.html' %}
-
-{% block title %}Новогодние елки с доставкой | Ростов-на-Дону{% endblock %}
-
-{% block meta %}
-    <meta name="description" content="Заказайте живые новогодние елки и сосны с доставкой по Ростову-на-Дону. Большой выбор, свежие деревья.">
-{% endblock %}
+{% load static %}
 
 {% block content %}
-    <!-- Тестовый блок, чтобы убедиться, что всё работает -->
-    <div class="hero min-h-screen bg-base-200">
-        <div class="hero-content text-center">
-            <div class="max-w-md">
-                <h1 class="text-5xl font-bold">Hello, Новый Год!</h1>
-                <p class="py-6">Tailwind CSS и DaisyUI успешно подключены. Пора продавать елки!</p>
-                <button class="btn btn-primary">Тестовая кнопка DaisyUI</button>
+    <!-- 1. Баннер: предложение + фото ёлки -->
+    <section class="bg-pine text-cream bg-snow">
+        <div class="container mx-auto px-4">
+            <div class="grid lg:grid-cols-5 lg:items-center">
+                <!-- Текстовый блок: на мобильном первым, на десктопе справа -->
+                <div class="relative z-10 order-1 py-10 lg:order-2 lg:col-span-2 lg:py-16 lg:pl-8">
+                    <div class="rounded-2xl bg-crimson px-6 py-8 text-white bg-snow shadow-2xl sm:px-10 sm:py-10 lg:-ml-24">
+                        <h1 class="text-4xl font-black leading-[1.05] sm:text-5xl lg:text-6xl">
+                            Живые ёлки, сосны и&nbsp;пихты
+                        </h1>
+                        <p class="mt-4 text-lg font-bold text-white/90 sm:text-xl">Ростов-на-Дону</p>
+                        <ul class="mt-2 space-y-1 text-base font-semibold text-white/90 sm:text-lg">
+                            <li>Бесплатная доставка</li>
+                            <li>Оплата при получении</li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- Фото ёлки: на десктопе портретное слева, на мобильном — панорамное -->
+                <div class="relative order-2 lg:order-1 lg:col-span-3">
+                    <picture>
+                        <source media="(min-width: 1024px)" srcset="{% static 'img/hero-tree.webp' %}">
+                        <img src="{% static 'img/hero-tree-wide.webp' %}" alt="Наряженная живая ёлка с подарками у камина в гостиной"
+                             width="778" height="380" class="h-64 w-full object-cover sm:h-80 lg:h-[560px]">
+                    </picture>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- 2. Преимущества -->
+    <section class="border-t border-white/10 bg-pine text-cream bg-snow" aria-label="Преимущества">
+        <div class="container mx-auto px-4 py-12 sm:py-16">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4">
+                <div class="flex flex-col items-center gap-4 text-center">
+                    {% include 'includes/icon.html' with icon='truck' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
+                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                        Бесплатная доставка<br>до двери на следующий день
+                    </p>
+                </div>
+                <div class="flex flex-col items-center gap-4 text-center">
+                    {% include 'includes/icon.html' with icon='payment' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
+                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                        Оплата при получении<br>новогоднего дерева
+                    </p>
+                </div>
+                <div class="flex flex-col items-center gap-4 text-center">
+                    {% include 'includes/icon.html' with icon='globe' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
+                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                        Деревья из питомников<br>Дании и России
+                    </p>
+                </div>
+                <div class="flex flex-col items-center gap-4 text-center">
+                    {% include 'includes/icon.html' with icon='trees' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
+                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                        Широчайший ассортимент<br>и любые размеры
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Каталог по категориям: вкладки-якоря и секции с товарами -->
+    <section id="catalog" class="bg-base-100">
+        <div class="container mx-auto px-4 pt-14">
+            <nav class="flex flex-wrap justify-center gap-x-8 gap-y-2 pb-4 text-3xl font-black text-base-content/30 sm:text-4xl"
+                 aria-label="Категории каталога">
+                {% for category in tree_categories %}
+                    <a href="#cat-{{ category.slug }}" class="pb-2 transition hover:text-primary">{{ category.name|lower }}</a>
+                {% empty %}
+                    <h1 class="pb-2 text-primary">Каталог</h1>
+                {% endfor %}
+            </nav>
+        </div>
+
+        {% for category in tree_categories %}
+            <section id="cat-{{ category.slug }}" aria-label="{{ category.name }}" class="scroll-mt-24">
+                <div class="container mx-auto px-4 pb-14">
+                    <h2 class="sr-only">{{ category.name }}</h2>
+                    <div class="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:snap-none lg:overflow-visible">
+                        {% for product in category.products.all %}
+                            {% include 'partials/product_card.html' %}
+                        {% endfor %}
+                    </div>
+                    <p class="mt-1">
+                        <a href="{% url 'shop:category' category_slug=category.slug %}"
+                           class="font-bold text-primary underline-offset-4 hover:underline">
+                            Все товары категории «{{ category.name }}» →
+                        </a>
+                    </p>
+                </div>
+            </section>
+        {% endfor %}
+    </section>
+
+    <!-- 4. Популярные дополнения (подставки, украшения и т.п.) -->
+    {% if addon_products %}
+        <section id="addons" class="border-t border-base-300/60 bg-base-100">
+            <div class="container mx-auto px-4 py-14">
+                <h2 class="text-center text-3xl font-black sm:text-4xl">популярные дополнения</h2>
+                <div class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:snap-none lg:overflow-visible">
+                    {% for product in addon_products %}
+                        {% include 'partials/product_card.html' %}
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    <!-- 5. Контакты -->
+    <section id="contacts" class="scroll-mt-24 bg-pine text-cream bg-snow">
+        <div class="container mx-auto flex flex-col items-center gap-8 px-4 py-16 text-center">
+            <a href="tel:{{ SHOP_PHONE_TEL }}"
+               class="inline-block rounded-full border-[3px] border-[#e04a3f] px-8 py-3 text-2xl font-black tracking-wide transition hover:bg-[#e04a3f]/20 sm:text-4xl">
+                {{ SHOP_PHONE_DISPLAY }}
+            </a>
+            <div class="flex items-center gap-8">
+                <a href="{{ SHOP_TELEGRAM_URL }}" target="_blank" rel="noopener" aria-label="Написать в Telegram"
+                   class="text-cream/90 transition hover:text-cream">
+                    {% include 'includes/icon.html' with icon='telegram' class_name='w-9 h-9' %}
+                </a>
+                <a href="{{ SHOP_WHATSAPP_URL }}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"
+                   class="text-cream/90 transition hover:text-cream">
+                    {% include 'includes/icon.html' with icon='whatsapp' class_name='w-9 h-9' %}
+                </a>
+            </div>
+            <address class="text-sm font-semibold not-italic text-cream/80 sm:text-base">{{ SHOP_ADDRESS }}</address>
+        </div>
+    </section>
 {% endblock %}

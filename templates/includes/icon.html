@@ -1,0 +1,59 @@
+{% comment %}
+  Набор контурных SVG-иконок в едином стиле (белые линии на зелёном).
+  Подключение: {% include 'includes/icon.html' with icon='truck' class_name='w-16 h-16' %}
+{% endcomment %}
+{% if icon == 'truck' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <path d="M18 6l8 12H10l8-12z"/>
+    <path d="M18 18v16"/>
+    <path d="M4 40h30"/>
+    <path d="M34 40V30h9l9 10"/>
+    <path d="M4 40v8h8"/>
+    <path d="M52 48h8v-8"/>
+    <circle cx="16" cy="50" r="5"/>
+    <circle cx="46" cy="50" r="5"/>
+    <rect x="22" y="28" width="10" height="12" rx="1.5"/>
+    <path d="M27 28v12M22 34h10"/>
+</svg>
+{% elif icon == 'payment' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <path d="M6 46c10-1 17-5 22-13"/>
+    <path d="M58 46c-10-1-17-5-22-13"/>
+    <path d="M32 8l7 12H25l7-12z"/>
+    <path d="M32 20v8"/>
+</svg>
+{% elif icon == 'globe' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <circle cx="30" cy="34" r="20"/>
+    <path d="M10 34h40"/>
+    <path d="M30 14c8 6 8 34 0 40"/>
+    <path d="M30 14c-8 6-8 34 0 40"/>
+    <path d="M47 6c3.9 0 7 3.1 7 7 0 5-7 11-7 11s-7-6-7-11c0-3.9 3.1-7 7-7z"/>
+    <circle cx="47" cy="13" r="2.2"/>
+</svg>
+{% elif icon == 'trees' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <path d="M16 4l11 16H5L16 4z"/>
+    <path d="M16 20v14"/>
+    <path d="M8 40h16"/>
+    <path d="M46 14l9 13H37l9-13z"/>
+    <path d="M46 27v13"/>
+    <path d="M39 46h14"/>
+    <rect x="24" y="34" width="12" height="12" rx="1.5"/>
+    <path d="M30 34v12M24 40h12"/>
+</svg>
+{% elif icon == 'telegram' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <path d="M6 33L58 10 40 55 33 38 6 33z"/>
+    <path d="M33 38L58 10"/>
+</svg>
+{% elif icon == 'whatsapp' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <path d="M32 6a26 26 0 0 0-22 40L6 58l12.6-4.2A26 26 0 1 0 32 6z"/>
+    <path d="M25 17l5.5 7.5-5 4.5c2 5.5 6.5 10 12 12l4.5-5L50 32c-.5 4.5-3.5 7-8 7-10.5-1-19.5-10-20.5-20.5 0-4.5 1-7 3.5-7.5z"/>
+</svg>
+{% elif icon == 'phone' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <path d="M12 6h10l4 10-6 4c3 7 9 13 16 16l4-6 10 4v10c0 2-2 4-4 4C26 58 6 38 6 12c0-3 2-6 6-6z"/>
+</svg>
+{% endif %}

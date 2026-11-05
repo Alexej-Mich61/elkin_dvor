@@ -4,11 +4,10 @@
 Интернет-магазин живых новогодних ёлок с доставкой (Ростов-на-Дону). Без онлайн-оплаты:
 посетитель оформляет заказ → клиент и менеджер получают письмо с номером заказа →
 оплата наличными при доставке. В планах: промокоды и акции.
-Стадия: выполнены этапы 0 (основа: каркас шаблонов, ru-ru и Europe/Moscow, HTMX,
-переносимый NPM_BIN_PATH, UTF-8 requirements, статика/медиа) и 1 (модели каталога
-`Category`, `Product`, `ProductVariant`, `ProductImage`, миграция `shop.0001_initial`,
-настроенный Django Admin, тесты моделей, демоданные). Публичные views и формы
-каталога пока не реализованы; следующий — этап 2.
+Стадия: выполнены этапы 0 (основа), 1 (модели каталога и админка) и 2 (публичная главная,
+страницы категорий/товаров, SEO-основа: title/description/canonical, JSON-LD Product,
+sitemap.xml, robots.txt). Корзина и собственные формы заказа пока не реализованы;
+следующий — этап 3.
 
 ## Документация
 - [ROADMAP.md](ROADMAP.md) — порядок этапов, задачи, критерии готовности и текущие отметки выполнения.
@@ -48,31 +47,47 @@ venv/Scripts/python.exe manage.py check
 
 ## Структура
 - `config/` — пакет проекта: `settings.py`, `urls.py`, `wsgi/asgi.py`. settings-модуль: `config.settings`.
-- `shop/` — приложение магазина: модели каталога, админка и тесты реализованы (этап 1); публичные views пока не созданы.
+- `shop/` — приложение магазина:
+  - модели каталога (`models.py`), админка (`admin.py`), тесты моделей и публичного каталога (`tests.py`);
+  - публичные views (`views.py`) и URL (`urls.py`): главная, категория, товар, HTMX-цена варианта;
+  - `sitemaps.py` (Category/Product для sitemap.xml), `context_processors.py` (контакты магазина
+    на всех страницах: телефон, мессенджеры, адрес — править там), `templatetags/shop_extras.py`
+    (формат цен, диапазон цен, размеры, основное изображение).
 - `cart/`, `orders/` — целевые приложения по `docs/architecture.md`; пока не созданы.
 - `theme/` — Tailwind-приложение (django-tailwind):
   - `static_src/` — источники: `src/styles.css`, `package.json`; там же `node_modules`;
   - `static/css/dist/styles.css` — собранный CSS (генерируется, вручную не править).
 - `templates/` — глобальные шаблоны (прописано в `settings.TEMPLATES.DIRS`):
-  - `base.html` — только каркас (head, шапка/подвал через includes, блоки `title`, `meta`, `content`);
-  - `home.html` — главная страница;
-  - `includes/` — повторяющиеся фрагменты (`header.html`, `footer.html`);
-  - `partials/` — HTMX-фрагменты (первые появятся на этапе 3, корзина).
-- `static/` — глобальная статика (`js/` пока пуст, для кастомного JS).
+  - `base.html` — каркас (head, SEO-блоки title/meta_description, шапка/подвал через includes, Alpine+HTMX CDN);
+  - `home.html` — главная: баннер, преимущества, каталог по категориям, «популярные дополнения», контакты;
+  - `shop/category.html`, `shop/product.html` — страницы категории и товара (галерея Alpine, выбор размера с HTMX-ценой, JSON-LD);
+  - `includes/` — повторяющиеся фрагменты (`header.html`, `footer.html`, `icon.html` — контурные SVG-иконки, `mobile_contacts_bar.html` — плавающая панель связи на мобильных);
+  - `partials/` — HTMX-фрагменты и карточка товара (`product_card.html`, `variant_price.html`);
+  - `robots.txt` — отдаётся через TemplateView с `text/plain`.
+- `static/` — глобальная статика:
+  - `img/` — фирменные изображения (логотип `logo_elkin_dvor.png`, хиро-ёлки `hero-tree*.webp`);
+  - `favicon.ico` — фавикон (подключается в `base.html`);
+  - `js/` — пока пуст, для кастомного JS.
+- `scripts/demo_catalog.py` — ручной дозапуск демо-товаров (идемпотентный; не часть бизнес-логики).
 - `ROADMAP.md` — план разработки и статусы этапов.
 - `docs/architecture.md` — целевые архитектурные договорённости.
 - `.env` — `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` (шаблон — `.env.example`); в git не коммитится.
 - `db.sqlite3` — локальная БД, в git не коммитится.
 
 ## Маршруты (config/urls.py)
-- `/` — `TemplateView` → `templates/home.html`, name=`home`.
+- `/` — `shop.views.home`, name=`shop:home` (данные каталога из БД).
+- `/catalog/<category_slug>/` — `shop.views.category_detail`, name=`shop:category`.
+- `/catalog/<category_slug>/<product_slug>/` — `shop.views.product_detail`, name=`shop:product`.
+- `/catalog/<category_slug>/<product_slug>/price/?variant=<id>` — HTMX-фрагмент цены, name=`shop:variant_price`.
+- `/sitemap.xml`, `/robots.txt` — SEO (django.contrib.sitemaps; домен сайта задаётся в админке Sites).
 - `/admin/` — стандартная админка Django.
 - `__reload__/` и раздача `/media/` — подключаются только при `DEBUG=True`.
 
 ## Модели и связи
-Реализованы модели каталога в `shop/models.py` (миграция `shop.0001_initial`):
+Реализованы модели каталога в `shop/models.py` (миграции `shop.0001_initial`, `shop.0002_category_is_addon`):
 - `Category` — slug генерируется из названия при пустом значении (`build_unique_slug`,
-  кириллица сохраняется), есть `sort_order`, `is_active`, SEO-поля.
+  кириллица сохраняется), есть `sort_order`, `is_active`, `is_addon` (категория дополнительных
+  товаров — выводится в секции «популярные дополнения» на главной), SEO-поля.
 - `Product` — FK на категорию с `PROTECT`, несимметричный M2M `related_products` на себя
   (self-рекомендация запрещена в `clean()`), slug аналогично категории.
 - `ProductVariant` — размер хранится текстовым полем `size` (отдельная модель `Size` не нужна);
@@ -80,6 +95,8 @@ venv/Scripts/python.exe manage.py check
 - `ProductImage` — `upload_to='products/images/'`, одно основное изображение на товар
   (conditional UniqueConstraint + проверка в `clean()`), сортировка: основное первым.
 Кастомного user model нет и не планируется — используется стоковый `auth_user`.
+Публичный каталог показывает только активные товары/варианты/категории и товары
+хотя бы с одним активным вариантом (см. `shop.views.public_products_queryset`).
 Целевые модели заказов и промокодов описаны в `docs/architecture.md` (этапы 4–6), пока не созданы.
 
 ## Договорённости кода
@@ -90,6 +107,8 @@ venv/Scripts/python.exe manage.py check
   не классический `EMAIL_BACKEND`); сейчас стоит `console.EmailBackend` — письма в консоль.
 - Стили: править только `theme/static_src/src/styles.css`; сборку доводить до
   `theme/static/css/dist/` (команды выше). Классы Tailwind/daisyUI — в шаблонах.
+  Фирменная палитра (зелёный/красный/сливочный) и декоративный класс `bg-snow` заданы
+  в `styles.css` поверх встроенной темы daisyUI; шрифт Nunito подключается в `base.html`.
 - В `base.html` CSS подключается тегом `{% tailwind_css %}`, скрипты — Alpine.js и HTMX (CDN).
 - Разделение ответственности: HTMX — серверные действия (размер/цена, корзина, счётчик,
   промокод, checkout); Alpine.js — только локальное UI-состояние (мобильное меню, модалки,
@@ -116,6 +135,18 @@ venv/Scripts/python.exe manage.py check
 - Локаль `ru-ru`, зона `Europe/Moscow`; `USE_TZ=True` — в БД время в UTC, показ по Москве.
 - `ALLOWED_HOSTS` читается из `.env`; с `DEBUG=False` без него — ошибки.
 - Линтер не настроен — минимальная проверка: `manage.py check` и `manage.py test`.
+- Slug'и каталога создаются с `allow_unicode=True` (кириллица), поэтому стандартный
+  конвертер `<slug:...>` Django (только ASCII) не подходит — в `shop/urls.py` зарегистрирован
+  `UnicodeSlugConverter` (`uslug`). URL в sitemap отдаются в percent-encoding — это нормально.
+- daisyUI 5.7 НЕ поддерживает объекты кастомных тем в `@plugin "daisyui" { themes: {...} }`
+  (объект молча игнорируется). Палитра проекта переопределяется в `styles.css` через
+  переменные в `:root` (специфичность выше, чем у `:where(:root)` из темы daisyUI);
+  подключена только светлая тема (`themes: "light --default"`), автотёмная по
+  `prefers-color-scheme` отключена.
+- Демо-фото товаров в `media/products/images/` — сгенерированные заглушки (цветные квадраты
+  с подписью), а не битые картинки.
+- Контакты (телефон, Telegram/WhatsApp, адрес) живут в `shop/context_processors.py`;
+  ссылка Telegram — заглушка `https://t.me/elkin_dvor`, заменить на реальную.
 
 ## Завершение итерации
 - Запустить `manage.py check` и относящиеся к изменениям тесты.

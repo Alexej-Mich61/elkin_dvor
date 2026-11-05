@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
+from django.urls import reverse
 
 from .models import Category, Product, ProductImage, ProductVariant
 
@@ -125,3 +126,168 @@ class ProductImageModelTests(CatalogTestCase):
 
         first = ProductImage.objects.filter(product=self.product).first()
         self.assertEqual(first.pk, main.pk)
+
+
+class PublicCatalogTests(TestCase):
+    """Публичные страницы показывают только активные записи и отдают SEO-основу."""
+
+    def setUp(self):
+        self.category = Category.objects.create(name="Сосны")
+        self.product = Product.objects.create(
+            category=self.category, name="Сосна обыкновенная", description="Пушистая"
+        )
+        self.variant = ProductVariant.objects.create(
+            product=self.product, size="1,5 м", price=Decimal("3900.00")
+        )
+        ProductVariant.objects.create(
+            product=self.product, size="2,5 м", price=Decimal("4900.00")
+        )
+
+    def test_home_shows_active_product(self):
+        response = self.client.get(reverse("shop:home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Сосна обыкновенная")
+        self.assertContains(response, "3 900–4 900 руб.")
+
+    def test_home_hides_inactive_records(self):
+        # Неактивные товар, категория и вариант не должны попасть на главную.
+        Category.objects.create(name="Скрытые", is_active=False)
+        Product.objects.create(
+            category=self.category, name="Сосна невидимка", is_active=False
+        )
+        ProductVariant.objects.create(
+            product=self.product, size="0,5 м", price=Decimal("500.00"), is_active=False
+        )
+
+        response = self.client.get(reverse("shop:home"))
+
+        self.assertNotContains(response, "Скрытые")
+        self.assertNotContains(response, "Сосна невидимка")
+        self.assertNotContains(response, "0,5 м")
+
+    def test_product_without_active_variant_hidden(self):
+        lonely = Product.objects.create(category=self.category, name="Без вариантов")
+        ProductVariant.objects.create(
+            product=lonely, size="1 м", price=Decimal("100.00"), is_active=False
+        )
+
+        response = self.client.get(reverse("shop:home"))
+
+        self.assertNotContains(response, "Без вариантов")
+
+    def test_addon_category_products_in_addons_section(self):
+        addons = Category.objects.create(name="Подставки", is_addon=True)
+        stand = Product.objects.create(category=addons, name="Подставка малая")
+        ProductVariant.objects.create(
+            product=stand, size="до 2 м", price=Decimal("1500.00")
+        )
+
+        response = self.client.get(reverse("shop:home"))
+
+        self.assertContains(response, "популярные дополнения")
+        self.assertContains(response, "Подставка малая")
+
+    def test_category_page_by_slug(self):
+        response = self.client.get(
+            reverse("shop:category", kwargs={"category_slug": self.category.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Сосна обыкновенная")
+        self.assertContains(response, '<h1', html=False)
+
+    def test_inactive_category_not_public(self):
+        hidden = Category.objects.create(name="Архив", is_active=False)
+        response = self.client.get(
+            reverse("shop:category", kwargs={"category_slug": hidden.slug})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_product_page_by_slugs(self):
+        response = self.client.get(
+            reverse(
+                "shop:product",
+                kwargs={
+                    "category_slug": self.category.slug,
+                    "product_slug": self.product.slug,
+                },
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Сосна обыкновенная")
+        self.assertContains(response, "3 900 руб.")
+        self.assertContains(response, 'application/ld+json')
+
+    def test_inactive_product_not_public(self):
+        hidden = Product.objects.create(
+            category=self.category, name="Сосна скрытая", is_active=False
+        )
+        response = self.client.get(
+            reverse(
+                "shop:product",
+                kwargs={
+                    "category_slug": self.category.slug,
+                    "product_slug": hidden.slug,
+                },
+            )
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_variant_price_returns_server_price(self):
+        url = reverse(
+            "shop:variant_price",
+            kwargs={
+                "category_slug": self.category.slug,
+                "product_slug": self.product.slug,
+            },
+        )
+        response = self.client.get(url, {"variant": self.variant.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "3 900 руб.")
+
+    def test_variant_price_rejects_inactive_variant(self):
+        self.variant.is_active = False
+        self.variant.save()
+        url = reverse(
+            "shop:variant_price",
+            kwargs={
+                "category_slug": self.category.slug,
+                "product_slug": self.product.slug,
+            },
+        )
+        response = self.client.get(url, {"variant": self.variant.pk})
+        self.assertEqual(response.status_code, 404)
+
+    def test_related_products_only_active(self):
+        stand = Product.objects.create(category=self.category, name="Подставка")
+        ProductVariant.objects.create(
+            product=stand, size="до 3 м", price=Decimal("1500.00")
+        )
+        self.product.related_products.add(stand)
+        hidden = Product.objects.create(
+            category=self.category, name="Скрытая подставка", is_active=False
+        )
+        self.product.related_products.add(hidden)
+
+        response = self.client.get(
+            reverse(
+                "shop:product",
+                kwargs={
+                    "category_slug": self.category.slug,
+                    "product_slug": self.product.slug,
+                },
+            )
+        )
+
+        self.assertContains(response, "Подставка")
+        self.assertNotContains(response, "Скрытая подставка")
+
+    def test_sitemap_and_robots(self):
+        response = self.client.get("/sitemap.xml")
+        self.assertEqual(response.status_code, 200)
+        # URL в sitemap отдаются в percent-encoding.
+        self.assertContains(response, "/catalog/")
+
+        response = self.client.get("/robots.txt")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sitemap:")
+        self.assertContains(response, "/admin/", html=False)
