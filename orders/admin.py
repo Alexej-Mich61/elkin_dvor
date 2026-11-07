@@ -1,6 +1,13 @@
-from django.contrib import admin
+"""Админка промокодов, заказов и покупателей.
 
-from .models import PromoCode, format_amount
+Заказы: фильтр по статусу и дате, поиск по номеру, имени, телефону, email
+и адресу. Контактный и денежный снимок заказа исторический — в админке
+только для чтения; менять вручную можно только статус (выполнен/отменён).
+"""
+from django.contrib import admin
+from django.db.models import Count
+
+from .models import Customer, Order, OrderItem, PromoCode, format_amount
 
 
 @admin.register(PromoCode)
@@ -25,3 +32,78 @@ class PromoCodeAdmin(admin.ModelAdmin):
         if obj.discount_type == PromoCode.DISCOUNT_PERCENT:
             return f"{format_amount(obj.discount_value)} %"
         return f"{format_amount(obj.discount_value)} руб."
+
+
+class OrderItemInline(admin.TabularInline):
+    """Позиции заказа — исторический снимок, в админке только для чтения."""
+
+    model = OrderItem
+    extra = 0
+    can_delete = False
+    fields = readonly_fields = (
+        "product_name",
+        "variant_size",
+        "unit_price",
+        "quantity",
+        "total_price",
+    )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    """Заказы: список с фильтрами и поиском; статус меняется вручную."""
+
+    list_display = (
+        "number",
+        "created_at",
+        "name",
+        "phone",
+        "total_display",
+        "status",
+    )
+    list_filter = ("status", "created_at")
+    search_fields = ("number", "name", "phone", "email", "address")
+    list_editable = ("status",)
+    inlines = (OrderItemInline,)
+    # Снимок оформления (контакты, адрес, деньги, промокод) — исторический:
+    # после создания заказа не редактируется, только статус.
+    readonly_fields = (
+        "number",
+        "customer",
+        "name",
+        "phone",
+        "email",
+        "address",
+        "note",
+        "subtotal",
+        "discount",
+        "total",
+        "promo_code",
+        "promo_discount_type",
+        "promo_discount_value",
+        "created_at",
+        "updated_at",
+    )
+
+    @admin.display(description="Сумма")
+    def total_display(self, obj):
+        return f"{format_amount(obj.total)} руб."
+
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    """Покупатели: поиск по имени, телефону и email; число заказов в списке."""
+
+    list_display = ("name", "phone", "email", "orders_count", "created_at")
+    search_fields = ("name", "phone", "phone_normalized", "email")
+    readonly_fields = ("phone_normalized", "created_at", "updated_at")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_orders_count=Count("orders"))
+
+    @admin.display(description="Заказов", ordering="_orders_count")
+    def orders_count(self, obj):
+        return obj._orders_count

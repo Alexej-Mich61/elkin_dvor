@@ -18,6 +18,8 @@ urlpatterns = [
     path("", include("shop.urls")),
     # Сессионная корзина
     path("cart/", include("cart.urls")),
+    # Оформление заказа и подтверждение (orders)
+    path("orders/", include("orders.urls")),
     # SEO: карта сайта и правила для роботов
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
     path(

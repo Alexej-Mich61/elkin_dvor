@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load shop_extras %}
+
+{% block title %}Оформление заказа — {{ SHOP_NAME }}{% endblock %}
+{% block robots_meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8 sm:py-12">
+        <h1 class="text-3xl font-black sm:text-4xl">Оформление заказа</h1>
+
+        <div class="mt-8 grid items-start gap-8 lg:grid-cols-[1fr_360px]">
+            <!-- Форма: обычный POST с серверной валидацией. При ошибках
+                 поля выделяются и пояснение выводится рядом с полем,
+                 введённые данные сохраняются. -->
+            <form method="post" action="{% url 'orders:checkout' %}" novalidate
+                  class="rounded-2xl border border-base-300 bg-white px-6 py-6">
+                {% csrf_token %}
+                <input type="hidden" name="ct" value="{{ checkout_token }}">
+
+                {% if form.non_field_errors %}
+                    <div class="mb-4 rounded-xl bg-error/10 px-4 py-3 text-sm font-semibold text-error">
+                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="grid gap-5">
+                    <div>
+                        <label for="id_name" class="mb-1 block text-sm font-bold">
+                            Имя <span class="text-error" aria-hidden="true">*</span>
+                        </label>
+                        <input type="text" id="id_name" name="name" required
+                               maxlength="{{ form.name.field.max_length }}"
+                               value="{{ form.name.value|default:'' }}"
+                               autocomplete="name"
+                               aria-invalid="{% if form.name.errors %}true{% else %}false{% endif %}"
+                               class="input input-bordered w-full{% if form.name.errors %} input-error{% endif %}">
+                        {% if form.name.errors %}
+                            <p class="mt-1 text-sm font-semibold text-error">{{ form.name.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-sm text-base-content/60">{{ form.name.field.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_phone" class="mb-1 block text-sm font-bold">
+                            Телефон <span class="text-error" aria-hidden="true">*</span>
+                        </label>
+                        <input type="tel" id="id_phone" name="phone" required
+                               maxlength="{{ form.phone.field.max_length }}"
+                               value="{{ form.phone.value|default:'' }}"
+                               autocomplete="tel"
+                               placeholder="+7 (___) ___-__-__"
+                               aria-invalid="{% if form.phone.errors %}true{% else %}false{% endif %}"
+                               class="input input-bordered w-full{% if form.phone.errors %} input-error{% endif %}">
+                        {% if form.phone.errors %}
+                            <p class="mt-1 text-sm font-semibold text-error">{{ form.phone.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-sm text-base-content/60">{{ form.phone.field.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_email" class="mb-1 block text-sm font-bold">Email</label>
+                        <input type="email" id="id_email" name="email"
+                               maxlength="254"
+                               value="{{ form.email.value|default:'' }}"
+                               autocomplete="email"
+                               aria-invalid="{% if form.email.errors %}true{% else %}false{% endif %}"
+                               class="input input-bordered w-full{% if form.email.errors %} input-error{% endif %}">
+                        {% if form.email.errors %}
+                            <p class="mt-1 text-sm font-semibold text-error">{{ form.email.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-sm text-base-content/60">{{ form.email.field.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_address" class="mb-1 block text-sm font-bold">
+                            Адрес доставки <span class="text-error" aria-hidden="true">*</span>
+                        </label>
+                        <input type="text" id="id_address" name="address" required
+                               maxlength="{{ form.address.field.max_length }}"
+                               value="{{ form.address.value|default:'' }}"
+                               autocomplete="street-address"
+                               aria-invalid="{% if form.address.errors %}true{% else %}false{% endif %}"
+                               class="input input-bordered w-full{% if form.address.errors %} input-error{% endif %}">
+                        {% if form.address.errors %}
+                            <p class="mt-1 text-sm font-semibold text-error">{{ form.address.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-sm text-base-content/60">{{ form.address.field.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_note" class="mb-1 block text-sm font-bold">Примечание к заказу</label>
+                        <textarea id="id_note" name="note" rows="3"
+                                  maxlength="{{ form.note.field.max_length }}"
+                                  aria-invalid="{% if form.note.errors %}true{% else %}false{% endif %}"
+                                  class="textarea textarea-bordered w-full{% if form.note.errors %} textarea-error{% endif %}">{{ form.note.value|default:'' }}</textarea>
+                        {% if form.note.errors %}
+                            <p class="mt-1 text-sm font-semibold text-error">{{ form.note.errors.0 }}</p>
+                        {% else %}
+                            <p class="mt-1 text-sm text-base-content/60">{{ form.note.field.help_text }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <p class="mt-4 text-sm font-semibold text-base-content/60">
+                    <span class="text-error" aria-hidden="true">*</span> — обязательные поля
+                </p>
+
+                <button type="submit" class="btn btn-primary mt-6 w-full rounded-full text-base">
+                    Заказать
+                </button>
+                <p class="mt-3 text-center text-sm font-semibold text-base-content/60">
+                    Оплата наличными при получении · Бесплатная доставка по Ростову-на-Дону
+                </p>
+            </form>
+
+            <!-- Состав заказа: пересчитан на сервере в момент показа формы. -->
+            <aside class="rounded-2xl border border-base-300 bg-white px-6 py-6 lg:sticky lg:top-6">
+                <h2 class="text-lg font-black">Ваш заказ</h2>
+                <ul class="mt-4 space-y-3">
+                    {% for line in contents.available_lines %}
+                        <li class="flex items-baseline justify-between gap-3 text-sm">
+                            <span class="font-semibold">
+                                {{ line.variant.product.name }}
+                                <span class="text-base-content/60">· {{ line.variant.size }} × {{ line.quantity }}</span>
+                            </span>
+                            <span class="shrink-0 font-bold">{{ line.total_price|price }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <div class="mt-4 border-t border-base-300 pt-4 text-sm">
+                    {% if contents.promo_applied %}
+                        <p class="flex justify-between font-semibold text-base-content/60">
+                            <span>Товары</span><span>{{ contents.subtotal|price }}</span>
+                        </p>
+                        <p class="mt-1 flex justify-between font-semibold text-success">
+                            <span>Скидка по промокоду {{ contents.promo.code }}</span>
+                            <span>−{{ contents.discount|price }}</span>
+                        </p>
+                    {% endif %}
+                    <p class="mt-2 flex items-baseline justify-between text-lg">
+                        <span class="font-bold">Итого</span>
+                        <span class="font-black">{{ contents.total|price }}</span>
+                    </p>
+                </div>
+                <a href="{% url 'cart:detail' %}" class="mt-4 inline-flex items-center gap-1 text-sm font-bold text-primary transition hover:underline">
+                    {% include 'includes/icon.html' with icon='chevron-left' class_name='w-4 h-4' %}
+                    Вернуться в корзину
+                </a>
+            </aside>
+        </div>
+    </div>
+{% endblock %}

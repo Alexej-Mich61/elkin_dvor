@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static shop_extras %}
+
+{% block title %}Заказ оформлен — {{ SHOP_NAME }}{% endblock %}
+{% block robots_meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto max-w-3xl px-4 py-8 sm:py-12">
+        <div class="text-center">
+            <svg class="mx-auto h-16 w-16 text-success" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="m9 12 2 2 4-4"></path>
+            </svg>
+            <h1 class="mt-4 text-3xl font-black sm:text-4xl">Заказ оформлен!</h1>
+            <p class="mt-2 text-lg font-semibold text-base-content/70">
+                Номер вашего заказа — <span class="font-black text-primary">{{ order.number }}</span>
+            </p>
+            <p class="mt-1 text-sm font-semibold text-base-content/50">
+                от {{ order.created_at|date:"d.m.Y H:i" }}
+            </p>
+        </div>
+
+        <div class="mt-8 rounded-2xl border border-base-300 bg-white px-6 py-6">
+            <h2 class="text-lg font-black">Состав заказа</h2>
+            <ul class="mt-4 space-y-3">
+                {% for item in order.items.all %}
+                    <li class="flex items-baseline justify-between gap-3 text-sm">
+                        <span class="font-semibold">
+                            {{ item.product_name }}
+                            <span class="text-base-content/60">· {{ item.variant_size }} × {{ item.quantity }}</span>
+                        </span>
+                        <span class="shrink-0 font-bold">{{ item.total_price|price }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            <div class="mt-4 border-t border-base-300 pt-4 text-sm">
+                {% if order.discount > 0 %}
+                    <p class="flex justify-between font-semibold text-base-content/60">
+                        <span>Товары</span><span>{{ order.subtotal|price }}</span>
+                    </p>
+                    <p class="mt-1 flex justify-between font-semibold text-success">
+                        <span>Скидка{% if order.promo_code %} по промокоду {{ order.promo_code }}{% endif %}</span>
+                        <span>−{{ order.discount|price }}</span>
+                    </p>
+                {% endif %}
+                <p class="mt-2 flex items-baseline justify-between text-lg">
+                    <span class="font-bold">Итого</span>
+                    <span class="font-black">{{ order.total|price }}</span>
+                </p>
+                <p class="mt-1 text-sm font-semibold text-base-content/50">
+                    Оплата наличными при получении
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-base-300 bg-white px-6 py-6">
+            <h2 class="text-lg font-black">Доставка</h2>
+            <p class="mt-3 text-sm font-semibold">{{ order.name }} · {{ order.phone }}</p>
+            <p class="mt-1 text-sm font-semibold text-base-content/70">{{ order.address }}</p>
+            {% if order.note %}
+                <p class="mt-3 rounded-xl bg-base-200 px-4 py-3 text-sm font-semibold text-base-content/70">
+                    Примечание: {{ order.note }}
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="mt-6 space-y-3">
+            <p class="rounded-2xl bg-success/10 px-5 py-4 text-sm font-semibold">
+                Можно позвонить нам по телефону
+                <a href="tel:{{ SHOP_PHONE_TEL }}" class="font-black text-primary">{{ SHOP_PHONE_DISPLAY }}</a> —
+                подтвердим заказ и договоримся об удобном времени доставки.
+            </p>
+            <p class="rounded-2xl bg-base-200 px-5 py-4 text-sm font-semibold text-base-content/70">
+                Сохраните номер заказа — сделайте скриншот этой страницы.
+                Номер пригодится при получении и в разговоре с менеджером.
+            </p>
+        </div>
+
+        <!-- Данные карточки заказа уходят в браузер как JSON; кнопка «Скачать»
+             рисует изображение через canvas без повторного запроса к серверу. -->
+        <script type="application/json" id="order-card-data">{{ order_card_json|safe }}</script>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <button type="button" id="download-order-card" class="btn btn-primary rounded-full px-8">
+                Скачать
+            </button>
+            <a href="{% url 'shop:home' %}" class="btn btn-ghost rounded-full px-8">Вернуться на главную</a>
+        </div>
+    </div>
+    <script src="{% static 'js/order_card.js' %}" defer></script>
+{% endblock %}

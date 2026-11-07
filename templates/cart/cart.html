@@ -10,7 +10,7 @@
 
         {% if messages %}
             {% for message in messages %}
-                <p class="mt-4 rounded-xl bg-success/15 px-4 py-3 text-sm font-semibold">{{ message }}</p>
+                <p class="mt-4 rounded-xl px-4 py-3 text-sm font-semibold{% if 'error' in message.tags %} bg-error/10 text-error{% else %} bg-success/15{% endif %}">{{ message }}</p>
             {% endfor %}
         {% endif %}
 
