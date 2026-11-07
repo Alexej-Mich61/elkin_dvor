@@ -1,6 +1,7 @@
 """Формы корзины: проверка входных данных перед изменением сессии."""
 from django import forms
 
+from orders.models import PROMO_CODE_MAX_LENGTH, PROMO_CODE_PATTERN, normalize_promo_code
 from shop.models import ProductVariant
 
 from .services import MAX_LINE_QUANTITY
@@ -37,3 +38,24 @@ class AddToCartForm(forms.Form):
         ):
             raise forms.ValidationError("Этот товар сейчас недоступен для заказа.")
         return variant_id
+
+
+class PromoCodeForm(forms.Form):
+    """Валидация введённого промокода: формат и длина кода.
+
+    Существование, активность, сроки и минимальная сумма проверяются
+    сервисом корзины через единый расчёт — там же, где считается скидка."""
+
+    code = forms.CharField(
+        label="Промокод",
+        max_length=PROMO_CODE_MAX_LENGTH,
+        error_messages={"required": "Введите промокод."},
+    )
+
+    def clean_code(self):
+        code = normalize_promo_code(self.cleaned_data["code"])
+        if not PROMO_CODE_PATTERN.fullmatch(code):
+            raise forms.ValidationError(
+                "Код может состоять только из цифр и букв (русских или латинских)."
+            )
+        return code

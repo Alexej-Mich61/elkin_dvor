@@ -1,0 +1,46 @@
+{% comment %}
+  Блок промокода корзины. Два состояния:
+  - код не введён — форма (обычный POST и HTMX в #cart-contents);
+  - код в сессии — показываем его и кнопку «Убрать»; если промокод перестал
+    проходить повторную проверку (срок, активность, минимальная сумма),
+    скидка не применяется и причина выводится рядом с кодом.
+{% endcomment %}
+<div id="cart-promo" class="max-w-md">
+    {% if contents.promo %}
+        <div class="flex flex-wrap items-center gap-3 rounded-xl border border-base-300 bg-white px-4 py-3">
+            <p class="min-w-0 flex-1 text-sm font-semibold">
+                Промокод <span class="font-black">{{ contents.promo.code }}</span>
+                {% if contents.promo_applied %}
+                    <span class="text-success">— применён</span>
+                {% endif %}
+            </p>
+            <form method="post" action="{% url 'cart:promo_remove' %}"
+                  hx-post="{% url 'cart:promo_remove' %}"
+                  hx-target="#cart-contents" hx-swap="innerHTML">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-xs text-base-content/60 transition hover:text-error">
+                    Убрать
+                </button>
+            </form>
+            {% if contents.promo_error %}
+                <p class="w-full text-sm font-semibold text-error">{{ contents.promo_error }}</p>
+            {% endif %}
+        </div>
+    {% else %}
+        <form method="post" action="{% url 'cart:promo_apply' %}"
+              hx-post="{% url 'cart:promo_apply' %}"
+              hx-target="#cart-contents" hx-swap="innerHTML"
+              class="flex flex-wrap items-center gap-3">
+            {% csrf_token %}
+            <label for="promo-code" class="text-sm font-bold">Промокод</label>
+            <input type="text" id="promo-code" name="code" autocomplete="off"
+                   value="{% if promo_form %}{{ promo_form.data.code }}{% endif %}"
+                   placeholder="Например: ЁЛКА2026"
+                   class="input input-bordered input-sm w-44">
+            <button type="submit" class="btn btn-primary btn-sm rounded-full">Применить</button>
+            {% if promo_error %}
+                <p class="w-full text-sm font-semibold text-error">{{ promo_error }}</p>
+            {% endif %}
+        </form>
+    {% endif %}
+</div>

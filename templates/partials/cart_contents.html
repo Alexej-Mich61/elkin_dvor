@@ -58,6 +58,14 @@
         </p>
     {% endif %}
 
+    <!-- Промокод и итоги. Скидка всегда пересчитывается на сервере.
+         Без JavaScript форма делает обычный POST с редиректом сюда. -->
+    {% if contents.subtotal > 0 %}
+        <div class="mt-6">
+            {% include 'partials/cart_promo.html' %}
+        </div>
+    {% endif %}
+
     <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
         <form method="post" action="{% url 'cart:clear' %}"
               hx-post="{% url 'cart:clear' %}"
@@ -68,7 +76,15 @@
                 Очистить корзину
             </button>
         </form>
-        <p class="text-xl">Итого: <span class="font-black">{{ contents.subtotal|price }}</span></p>
+        <div class="text-right">
+            {% if contents.promo_applied %}
+                <p class="font-semibold text-base-content/60">Товары: {{ contents.subtotal|price }}</p>
+                <p class="mt-1 font-semibold text-success">
+                    Скидка по промокоду {{ contents.promo.code }}: −{{ contents.discount|price }}
+                </p>
+            {% endif %}
+            <p class="mt-1 text-xl">Итого: <span class="font-black">{{ contents.total|price }}</span></p>
+        </div>
     </div>
     <p class="mt-2 text-sm font-semibold text-base-content/60">
         Бесплатная доставка по Ростову-на-Дону · Оплата при получении

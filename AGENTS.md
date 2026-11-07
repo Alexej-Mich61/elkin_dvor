@@ -38,7 +38,7 @@ venv/Scripts/python.exe manage.py makemigrations
 venv/Scripts/python.exe manage.py migrate
 
 # тесты
-venv/Scripts/python.exe manage.py test                  # тесты моделей каталога (shop)
+venv/Scripts/python.exe manage.py test                  # тесты shop, cart и orders
 
 # проверки; отдельного линтера НЕТ, используем системные чеки Django
 venv/Scripts/python.exe manage.py check
@@ -53,18 +53,30 @@ venv/Scripts/python.exe manage.py check
   - `sitemaps.py` (Category/Product для sitemap.xml), `context_processors.py` (контакты магазина
     на всех страницах: телефон, мессенджеры, адрес — править там), `templatetags/shop_extras.py`
     (формат цен, диапазон цен, размеры, основное изображение).
-- `cart/` — сессионная корзина (этап 3):
-  - `services.py` — класс `Cart` поверх сессии: хранятся только `{variant_id: quantity}`,
-    цены/суммы каждый раз считаются по актуальному каталогу (`Cart.contents()`);
-    операции `add/set_quantity/remove/clear`; потолок позиции `MAX_LINE_QUANTITY = 100`,
-    при `stock > 0` лимит = остаток (обрезание с заметкой в интерфейсе);
-  - `views.py` — тонкие views (страница корзины, add/update/remove/clear):
-    HTMX-ответы через partials с OOB-обновлением счётчика в шапке (`#cart-link`),
-    без HTMX — POST/Redirect/GET на страницу корзины;
-  - `forms.py` (`AddToCartForm` — валидация активности варианта), `urls.py`,
+- `cart/` — сессионная корзина (этап 3) и промокод в корзине (этап 4):
+  - `services.py` — класс `Cart` поверх сессии: хранятся только `{variant_id: quantity}`
+    и нормализованный код промокода (`cart_promo`), цены/скидки/суммы каждый раз
+    считаются по актуальному каталогу и промокодам через единый расчёт
+    `orders.services.calculate_totals` (`Cart.contents()`);
+    операции `add/set_quantity/remove/clear/apply_promo/clear_promo`; потолок позиции
+    `MAX_LINE_QUANTITY = 100`, при `stock > 0` лимит = остаток (обрезание с заметкой
+    в интерфейсе); `clear()` убирает и промокод;
+  - `views.py` — тонкие views (страница корзины, add/update/remove/clear,
+    apply_promo/remove_promo): HTMX-ответы через partials с OOB-обновлением
+    счётчика в шапке (`#cart-link`), без HTMX — POST/Redirect/GET на страницу
+    корзины с сообщением;
+  - `forms.py` (`AddToCartForm` — валидация активности варианта; `PromoCodeForm` —
+    формат кода: только цифры и буквы латиницы/кириллицы), `urls.py`,
     `context_processors.py` (`cart_count` для шапки, без запросов к БД),
-    `tests.py` (операции корзины и HTTP-сценарии).
-- `orders/` — целевое приложение по `docs/architecture.md`; пока не создано.
+    `tests.py` (операции корзины, промокод, HTTP-сценарии).
+- `orders/` — промокоды и единый расчёт (этап 4):
+  - `models.py` — `PromoCode`: нормализованный уникальный код (trim + upper,
+    только цифры/буквы лат/кирилл, см. `PROMO_CODE_PATTERN`), активность, тип скидки
+    (процент/фиксированная), величина, минимальная сумма заказа, период действия;
+    `validate_for(subtotal, now)` — проверка применимости с текстом причины отказа;
+  - `services.py` — единый расчёт `calculate_totals(lines, promo, now)`: подытог,
+    скидка, итог; округление до копеек `ROUND_HALF_UP`, итог не ниже нуля.
+    Модели заказов и покупателей — этап 5.
 - `theme/` — Tailwind-приложение (django-tailwind):
   - `static_src/` — источники: `src/styles.css`, `package.json`; там же `node_modules`;
   - `static/css/dist/styles.css` — собранный CSS (генерируется, вручную не править).
@@ -80,6 +92,7 @@ venv/Scripts/python.exe manage.py check
   - `favicon.ico` — фавикон (подключается в `base.html`);
   - `js/` — пока пуст, для кастомного JS.
 - `scripts/demo_catalog.py` — ручной дозапуск демо-товаров (идемпотентный; не часть бизнес-логики).
+- `scripts/demo_promos.py` — ручной дозапуск демо-промокодов (идемпотентный, `get_or_create`).
 - `ROADMAP.md` — план разработки и статусы этапов.
 - `docs/architecture.md` — целевые архитектурные договорённости.
 - `.env` — `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` (шаблон — `.env.example`); в git не коммитится.
@@ -95,6 +108,8 @@ venv/Scripts/python.exe manage.py check
 - `/cart/update/<variant_id>/` — изменение количества (POST, quantity в value кнопки «−»/«+»), name=`cart:update`.
 - `/cart/remove/<variant_id>/` — удаление позиции (POST), name=`cart:remove`.
 - `/cart/clear/` — очистка корзины (POST), name=`cart:clear`.
+- `/cart/promo/` — применение промокода (POST, поле `code`), name=`cart:promo_apply`.
+- `/cart/promo/remove/` — удаление промокода из корзины (POST), name=`cart:promo_remove`.
 - `/sitemap.xml`, `/robots.txt` — SEO (django.contrib.sitemaps; домен сайта задаётся в админке Sites).
 - `/admin/` — стандартная админка Django.
 - `__reload__/` и раздача `/media/` — подключаются только при `DEBUG=True`.
@@ -113,7 +128,10 @@ venv/Scripts/python.exe manage.py check
 Кастомного user model нет и не планируется — используется стоковый `auth_user`.
 Публичный каталог показывает только активные товары/варианты/категории и товары
 хотя бы с одним активным вариантом (см. `shop.views.public_products_queryset`).
-Целевые модели заказов и промокодов описаны в `docs/architecture.md` (этапы 4–6), пока не созданы.
+Промокоды (этап 4) — в `orders/models.py`: к коду применяется `PromoCode.validate_for`
+(активность, сроки, минимальная сумма) при каждом пересчёте; суммы — только
+через `orders/services.calculate_totals`. Целевые модели заказов и покупателей
+описаны в `docs/architecture.md` (этап 5), пока не созданы.
 
 ## Договорённости кода
 - Комментарии в коде — на русском, так и продолжаем.
@@ -172,6 +190,11 @@ venv/Scripts/python.exe manage.py check
   `prefers-color-scheme` отключена.
 - Демо-фото товаров в `media/products/images/` — сгенерированные заглушки (цветные квадраты
   с подписью), а не битые картинки.
+- `manage.py shell -c "..."` через Git Bash портит кириллицу в аргументе
+  (строки попадают в БД битые). Скрипты с кириллицей запускать из UTF-8-файла:
+  `manage.py shell -c "exec(compile(open('scripts/x.py', encoding='utf-8').read(), 'x.py', 'exec'))"`.
+- Нормализация промокода — только trim + верхний регистр: «Ё» и «Е» считаются
+  разными символами, код «ЁЛКА10» не совпадёт с «ЕЛКА10».
 - Контакты (телефон, Telegram/WhatsApp, адрес) живут в `shop/context_processors.py`;
   ссылка Telegram — заглушка `https://t.me/elkin_dvor`, заменить на реальную.
 

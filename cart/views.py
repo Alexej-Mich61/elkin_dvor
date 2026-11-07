@@ -10,7 +10,7 @@ from django.template.response import TemplateResponse
 
 from shop.models import ProductVariant
 
-from .forms import AddToCartForm
+from .forms import AddToCartForm, PromoCodeForm
 from .services import Cart, quantity_limit
 
 HX_REQUEST_HEADER = "HX-Request"
@@ -20,10 +20,16 @@ def _is_htmx(request):
     return request.headers.get(HX_REQUEST_HEADER) == "true"
 
 
-def _contents_response(request, cart):
-    """Содержимое корзины + OOB-обновление счётчика в шапке для HTMX."""
+def _contents_response(request, cart, status=200, extra=None):
+    """Содержимое корзины + OOB-обновление счётчика в шапке для HTMX.
+
+    extra — дополнительный контекст (например, форма промокода с ошибкой)."""
     context = {"cart": cart, "contents": cart.contents()}
-    return TemplateResponse(request, "partials/cart_contents_oob.html", context)
+    if extra:
+        context.update(extra)
+    return TemplateResponse(
+        request, "partials/cart_contents_oob.html", context, status=status
+    )
 
 
 def cart_detail(request):
@@ -120,10 +126,55 @@ def remove_cart_item(request, variant_id):
 
 
 def clear_cart(request):
-    """Полностью очищает корзину."""
+    """Полностью очищает корзину (вместе с промокодом)."""
     cart = Cart(request.session)
     if request.method == "POST":
         cart.clear()
+
+    if _is_htmx(request):
+        return _contents_response(request, cart)
+    return redirect("cart:detail")
+
+
+def apply_promo(request):
+    """Применяет промокод к корзине.
+
+    Скидка не сохраняется: в сессии остаётся только код, суммы пересчитываются
+    через единый расчёт при каждом показе корзины. Без HTMX — редирект
+    с сообщением; с HTMX — фрагмент корзины, при ошибке статус 422, чтобы
+    причина отобразилась в блоке промокода (htmx-config в base.html)."""
+    if request.method != "POST":
+        return redirect("cart:detail")
+
+    cart = Cart(request.session)
+    form = PromoCodeForm(request.POST)
+
+    if form.is_valid():
+        promo, error = cart.apply_promo(form.cleaned_data["code"])
+    else:
+        promo, error = None, form.errors["code"][0]
+
+    if error is None:
+        if _is_htmx(request):
+            return _contents_response(request, cart)
+        messages.success(request, f"Промокод {promo.code} применён.")
+        return redirect("cart:detail")
+
+    if _is_htmx(request):
+        return _contents_response(
+            request, cart, status=422, extra={"promo_form": form, "promo_error": error}
+        )
+    messages.error(request, error)
+    return redirect("cart:detail")
+
+
+def remove_promo(request):
+    """Убирает промокод из корзины."""
+    cart = Cart(request.session)
+    if request.method == "POST":
+        removed = cart.clear_promo()
+        if removed and not _is_htmx(request):
+            messages.info(request, "Промокод убран из корзины.")
 
     if _is_htmx(request):
         return _contents_response(request, cart)

@@ -4,6 +4,7 @@ from django.contrib.sessions.backends.base import SessionBase
 from django.test import TestCase
 from django.urls import reverse
 
+from orders.models import PromoCode
 from shop.models import Category, Product, ProductVariant
 
 from .services import MAX_LINE_QUANTITY, Cart
@@ -321,3 +322,223 @@ class CartCounterTests(CartTestCase):
         session = self.client.session
         session["cart"] = {str(self.variant.pk): quantity}
         session.save()
+
+
+class CartPromoServiceTests(CartTestCase):
+    """Промокод в сервисе корзины: хранение кода и пересчёт скидки."""
+
+    def setUp(self):
+        super().setUp()
+        self.promo = PromoCode.objects.create(
+            code="ЕЛКА10", discount_type=PromoCode.DISCOUNT_PERCENT,
+            discount_value=Decimal("10"),
+        )
+        self.cart = self.make_cart()
+
+    def make_cart(self, data=None, promo=None):
+        session = SessionBase()
+        if data is not None:
+            session["cart"] = data
+        if promo is not None:
+            session["cart_promo"] = promo
+        return Cart(session)
+
+    def test_apply_promo_stores_only_normalized_code(self):
+        self.cart.add(self.variant, 2)
+        promo, error = self.cart.apply_promo("  елка10 ")
+        self.assertIsNone(error)
+        self.assertEqual(promo.code, "ЕЛКА10")
+        # В сессии — код, а не скидка.
+        self.assertEqual(self.cart.session["cart_promo"], "ЕЛКА10")
+
+    def test_contents_recalculates_discount_from_code(self):
+        self.cart.add(self.variant, 2)
+        self.cart.apply_promo("ЕЛКА10")
+        contents = self.cart.contents()
+        self.assertTrue(contents.promo_applied)
+        self.assertEqual(contents.subtotal, Decimal("7800.00"))
+        self.assertEqual(contents.discount, Decimal("780.00"))
+        self.assertEqual(contents.total, Decimal("7020.00"))
+
+    def test_apply_unknown_code_rejected(self):
+        self.cart.add(self.variant)
+        promo, error = self.cart.apply_promo("NOPE2026")
+        self.assertIsNone(promo)
+        self.assertEqual(error, "Такого промокода нет.")
+        self.assertNotIn("cart_promo", self.cart.session)
+
+    def test_apply_code_with_special_symbols_rejected(self):
+        self.cart.add(self.variant)
+        promo, error = self.cart.apply_promo("ЕЛКА@10")
+        self.assertIsNone(promo)
+        self.assertIn("только из цифр и букв", error)
+        self.assertNotIn("cart_promo", self.cart.session)
+
+    def test_apply_below_min_order_rejected(self):
+        PromoCode.objects.create(
+            code="БОЛЬШОЙ", discount_type=PromoCode.DISCOUNT_FIXED,
+            discount_value=Decimal("500.00"), min_order_total=Decimal("10000.00"),
+        )
+        self.cart.add(self.variant)  # 3900 < 10000
+        applied, error = self.cart.apply_promo("БОЛЬШОЙ")
+        self.assertIsNone(applied)
+        self.assertIn("от 10000 руб.", error)
+        self.assertNotIn("cart_promo", self.cart.session)
+
+    def test_revalidation_drops_discount_when_promo_deactivated(self):
+        # Промокод применили, потом админ его выключил: скидка исчезает.
+        self.cart.add(self.variant, 2)
+        self.cart.apply_promo("ЕЛКА10")
+        self.promo.is_active = False
+        self.promo.save()
+
+        contents = self.cart.contents()
+        self.assertEqual(contents.discount, Decimal("0.00"))
+        self.assertEqual(contents.total, Decimal("7800.00"))
+        self.assertEqual(contents.promo_error, "Этот промокод не действует.")
+
+    def test_revalidation_when_quantity_drops_below_min_order(self):
+        PromoCode.objects.create(
+            code="МАЛО", discount_type=PromoCode.DISCOUNT_FIXED,
+            discount_value=Decimal("100.00"), min_order_total=Decimal("4000.00"),
+        )
+        self.cart.add(self.variant, 2)  # 7800 — промокод действует
+        self.cart.apply_promo("МАЛО")
+        self.assertTrue(self.cart.contents().promo_applied)
+
+        self.cart.set_quantity(self.variant.pk, 1)  # 3900 < 4000
+        contents = self.cart.contents()
+        self.assertEqual(contents.discount, Decimal("0.00"))
+        self.assertIn("от 4000 руб.", contents.promo_error)
+
+    def test_fixed_discount_recalculated_on_quantity_change(self):
+        PromoCode.objects.create(
+            code="ФИКС", discount_type=PromoCode.DISCOUNT_FIXED,
+            discount_value=Decimal("10000.00"),
+        )
+        self.cart.add(self.variant, 1)  # итог 3900, скидка обрезана до 3900
+        self.cart.apply_promo("ФИКС")
+        self.assertEqual(self.cart.contents().total, Decimal("0.00"))
+
+        self.cart.add(self.variant, 1)  # 7800 - 10000 -> тоже 0
+        contents = self.cart.contents()
+        self.assertEqual(contents.discount, Decimal("7800.00"))
+        self.assertEqual(contents.total, Decimal("0.00"))
+
+    def test_clear_cart_removes_promo(self):
+        self.cart.add(self.variant)
+        self.cart.apply_promo("ЕЛКА10")
+        self.cart.clear()
+        self.assertNotIn("cart_promo", self.cart.session)
+        self.assertEqual(self.cart.contents().total, Decimal("0.00"))
+
+    def test_clear_promo(self):
+        self.cart.add(self.variant)
+        self.cart.apply_promo("ЕЛКА10")
+        self.assertTrue(self.cart.clear_promo())
+        self.assertNotIn("cart_promo", self.cart.session)
+        self.assertFalse(self.cart.clear_promo())  # повторно — нечего убирать
+
+    def test_tampered_promo_session_value_ignored(self):
+        self.cart.add(self.variant)
+        self.cart.session["cart_promo"] = 12345  # не строка
+        contents = self.cart.contents()
+        self.assertIsNone(contents.promo)
+        self.assertEqual(contents.discount, Decimal("0.00"))
+
+    def test_deleted_promo_ignored(self):
+        self.cart.add(self.variant)
+        self.cart.apply_promo("ЕЛКА10")
+        self.promo.delete()
+        contents = self.cart.contents()
+        self.assertIsNone(contents.promo)
+        self.assertEqual(contents.total, Decimal("3900.00"))
+
+
+class CartPromoViewTests(CartTestCase):
+    """HTTP-сценарии промокода: HTMX и обычные POST."""
+
+    def setUp(self):
+        super().setUp()
+        PromoCode.objects.create(
+            code="ЕЛКА10", discount_type=PromoCode.DISCOUNT_PERCENT,
+            discount_value=Decimal("10"),
+        )
+        session = self.client.session
+        session["cart"] = {str(self.variant.pk): 2}
+        session.save()
+
+    def test_apply_promo_htmx_recalculates_totals(self):
+        response = self.client.post(
+            reverse("cart:promo_apply"), {"code": " елка10 "},
+            HTTP_HX_REQUEST=HX,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.session["cart_promo"], "ЕЛКА10")
+        self.assertContains(response, "Скидка по промокоду ЕЛКА10")
+        self.assertContains(response, "−780 руб.")
+        self.assertContains(response, "7 020 руб.")
+
+    def test_apply_unknown_promo_htmx_returns_422(self):
+        response = self.client.post(
+            reverse("cart:promo_apply"), {"code": "NOPE2026"}, HTTP_HX_REQUEST=HX
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertContains(response, "Такого промокода нет.", status_code=422)
+        self.assertNotIn("cart_promo", self.client.session)
+
+    def test_apply_invalid_format_htmx_returns_422(self):
+        response = self.client.post(
+            reverse("cart:promo_apply"), {"code": "ЕЛКА@10"}, HTTP_HX_REQUEST=HX
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertContains(response, "только из цифр и букв", status_code=422)
+        # Введённое значение остаётся в поле.
+        self.assertContains(response, "ЕЛКА@10", status_code=422)
+
+    def test_remove_promo_htmx(self):
+        self.client.post(reverse("cart:promo_apply"), {"code": "ЕЛКА10"})
+        response = self.client.post(
+            reverse("cart:promo_remove"), HTTP_HX_REQUEST=HX
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("cart_promo", self.client.session)
+        self.assertNotContains(response, "Скидка по промокоду")
+
+    def test_apply_promo_without_htmx_redirects_with_message(self):
+        response = self.client.post(
+            reverse("cart:promo_apply"), {"code": "ЕЛКА10"}
+        )
+        # Без follow: assertRedirects сам загрузил бы страницу и израсходовал
+        # одноразовые сообщения до нашей проверки.
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("cart:detail"))
+        followed = self.client.get(response.url)
+        self.assertContains(followed, "Промокод ЕЛКА10 применён.")
+
+    def test_apply_error_without_htmx_shows_message(self):
+        response = self.client.post(
+            reverse("cart:promo_apply"), {"code": "NOPE2026"}
+        )
+        self.assertEqual(response.status_code, 302)
+        followed = self.client.get(response.url)
+        self.assertContains(followed, "Такого промокода нет.")
+
+    def test_cart_page_shows_promo_block_and_totals(self):
+        self.client.post(reverse("cart:promo_apply"), {"code": "ЕЛКА10"})
+        response = self.client.get(reverse("cart:detail"))
+        self.assertContains(response, 'id="cart-promo"')
+        self.assertContains(response, "Скидка по промокоду ЕЛКА10")
+        self.assertContains(response, "7 800 руб.")  # подытог
+        self.assertContains(response, "7 020 руб.")  # итог
+
+    def test_cart_page_hides_promo_block_when_empty(self):
+        self.client.post(reverse("cart:clear"))
+        response = self.client.get(reverse("cart:detail"))
+        self.assertNotContains(response, 'id="cart-promo"')
+
+    def test_promo_requires_post(self):
+        response = self.client.get(reverse("cart:promo_apply"))
+        self.assertRedirects(response, reverse("cart:detail"))
+        response = self.client.get(reverse("cart:promo_remove"))
+        self.assertRedirects(response, reverse("cart:detail"))
