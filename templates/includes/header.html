@@ -13,10 +13,7 @@
                class="hidden p-2 text-cream/90 transition hover:text-cream sm:inline-flex">
                 {% include 'includes/icon.html' with icon='whatsapp' class_name='w-7 h-7' %}
             </a>
-            <a href="#contacts"
-               class="inline-flex items-center rounded-full border-2 border-[#e04a3f] px-6 py-1.5 text-sm font-extrabold text-white transition hover:bg-[#e04a3f]/20 sm:px-8 sm:py-2 sm:text-base">
-                Заказать
-            </a>
+            {% include 'partials/cart_link.html' %}
         </div>
     </div>
 </header>

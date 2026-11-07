@@ -1,0 +1,90 @@
+{% load shop_extras %}
+{% if contents.lines %}
+    <ul class="divide-y divide-base-300 rounded-2xl border border-base-300 bg-white">
+        {% for line in contents.lines %}
+            <li class="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-4 sm:px-6{% if not line.is_available %} opacity-70{% endif %}">
+                {% if line.is_available %}
+                    <div class="min-w-40 flex-1">
+                        <a href="{% url 'shop:product' category_slug=line.variant.product.category.slug product_slug=line.variant.product.slug %}"
+                           class="font-extrabold transition hover:text-primary">
+                            {{ line.variant.product.name }}
+                        </a>
+                        <p class="text-sm font-semibold text-base-content/60">{{ line.variant.size }}</p>
+                    </div>
+                    <p class="w-24 font-bold text-base-content/80">{{ line.unit_price|price }}</p>
+                    <!-- Счётчик количества: кнопки «−»/«+» отправляют form со своим
+                         value, поэтому работают и без JavaScript. 0 или «−» на единице
+                         удаляет позицию (обработка на сервере). -->
+                    <form method="post" action="{% url 'cart:update' line.variant_id %}"
+                          hx-post="{% url 'cart:update' line.variant_id %}"
+                          hx-target="#cart-contents" hx-swap="innerHTML"
+                          class="flex items-center gap-1 rounded-full border-2 border-base-300 bg-base-100 px-1 py-1">
+                        {% csrf_token %}
+                        <button type="submit" name="quantity" value="{{ line.quantity|add:'-1' }}"
+                                class="btn btn-circle btn-xs btn-ghost" aria-label="Уменьшить количество">−</button>
+                        <span class="w-8 text-center font-black" aria-live="polite">{{ line.quantity }}</span>
+                        <button type="submit" name="quantity" value="{{ line.quantity|add:'1' }}"
+                                class="btn btn-circle btn-xs btn-ghost" aria-label="Увеличить количество">+</button>
+                    </form>
+                    <p class="w-28 text-right font-black">{{ line.total_price|price }}</p>
+                {% else %}
+                    <div class="min-w-40 flex-1">
+                        {% if line.variant %}
+                            <p class="font-extrabold">{{ line.variant.product.name }} ({{ line.variant.size }})</p>
+                        {% else %}
+                            <p class="font-extrabold">Товар №{{ line.variant_id }}</p>
+                        {% endif %}
+                        <p class="text-sm font-semibold text-base-content/60">
+                            {% if line.variant %}Снят с продажи{% else %}Удалён из каталога{% endif %} — не войдёт в заказ
+                        </p>
+                    </div>
+                {% endif %}
+                <form method="post" action="{% url 'cart:remove' line.variant_id %}"
+                      hx-post="{% url 'cart:remove' line.variant_id %}"
+                      hx-target="#cart-contents" hx-swap="innerHTML">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-circle btn-ghost btn-sm text-base-content/50 transition hover:text-error"
+                            aria-label="Убрать позицию из корзины">
+                        {% include 'includes/icon.html' with icon='trash' class_name='w-5 h-5' %}
+                    </button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% if contents.has_unavailable %}
+        <p class="mt-4 rounded-xl bg-warning/15 px-4 py-3 text-sm font-semibold text-base-content/80">
+            Недоступные позиции не входят в сумму заказа — уберите их из корзины.
+        </p>
+    {% endif %}
+
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+        <form method="post" action="{% url 'cart:clear' %}"
+              hx-post="{% url 'cart:clear' %}"
+              hx-target="#cart-contents" hx-swap="innerHTML"
+              hx-confirm="Очистить корзину полностью?">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm text-base-content/60 transition hover:text-error">
+                Очистить корзину
+            </button>
+        </form>
+        <p class="text-xl">Итого: <span class="font-black">{{ contents.subtotal|price }}</span></p>
+    </div>
+    <p class="mt-2 text-sm font-semibold text-base-content/60">
+        Бесплатная доставка по Ростову-на-Дону · Оплата при получении
+    </p>
+
+    <div class="mt-8 rounded-2xl bg-base-200 px-6 py-6 text-center">
+        <a href="tel:{{ SHOP_PHONE_TEL }}" class="btn btn-primary rounded-full px-8 text-base">Оформить по телефону</a>
+        <p class="mx-auto mt-3 max-w-md text-sm font-semibold text-base-content/70">
+            Позвоните {{ SHOP_PHONE_DISPLAY }} — подтвердим заказ и доставку.
+            Онлайн-оформление появится чуть позже.
+        </p>
+    </div>
+{% else %}
+    <div class="rounded-2xl border border-base-300 bg-white px-6 py-14 text-center">
+        <p class="text-xl font-black">В корзине пока пусто</p>
+        <p class="mt-2 font-semibold text-base-content/60">Выберите живое дерево в каталоге — добавление займёт пару секунд.</p>
+        <a href="{% url 'shop:home' %}" class="btn btn-primary mt-6 rounded-full px-8">Перейти в каталог</a>
+    </div>
+{% endif %}

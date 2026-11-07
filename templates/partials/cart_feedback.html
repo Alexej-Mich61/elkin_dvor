@@ -1,0 +1,35 @@
+{% comment %}
+  Ответ на добавление в корзину (HTMX-фрагмент под #cart-feedback).
+
+  Два режима:
+  - form с ошибками (status 422) — показываем сообщения валидации;
+  - успех — подтверждение, заметка об ограничении остатка и OOB-обновление
+    счётчика в шапке (span#cart-counter).
+{% endcomment %}
+{% if form %}
+    {% if form.errors %}
+        <div class="rounded-xl bg-error/10 px-4 py-3 text-sm font-semibold text-error">
+            {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+            {% endfor %}
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% else %}
+    <div class="rounded-xl bg-success/15 px-4 py-3 text-sm font-semibold">
+        <p>✓ Добавлено: {{ variant.product.name }} ({{ variant.size }}) × {{ quantity }}</p>
+        {% if clamped %}
+            <p class="mt-1 text-base-content/70">
+                В наличии только {{ limit }} шт. — в корзине теперь {{ cart_total }} шт.
+            </p>
+        {% endif %}
+        <a href="{% url 'cart:detail' %}" class="mt-1 inline-block font-black text-primary underline-offset-4 hover:underline">
+            Перейти в корзину →
+        </a>
+    </div>
+    {% include 'partials/cart_link.html' with cart_oob=True cart_count=cart.count %}
+{% endif %}

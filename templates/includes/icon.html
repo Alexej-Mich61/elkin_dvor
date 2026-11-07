@@ -64,4 +64,16 @@
 <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-5 h-5' }}" aria-hidden="true">
     <path d="M24 14l18 18-18 18"/>
 </svg>
+{% elif icon == 'cart' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-8 h-8' }}" aria-hidden="true">
+    <path d="M10 20h44l-4 34H14l-4-34z"/>
+    <path d="M24 28V14a8 8 0 0 1 16 0v14"/>
+</svg>
+{% elif icon == 'trash' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-6 h-6' }}" aria-hidden="true">
+    <path d="M14 18h36"/>
+    <path d="M26 18v-4h12v4"/>
+    <path d="M20 18l2 36h20l2-36"/>
+    <path d="M28 28v14M36 28v14"/>
+</svg>
 {% endif %}

@@ -1,0 +1,6 @@
+{% comment %}
+  Ответ HTMX-запросов к корзине: обновлённое содержимое + out-of-band
+  обновление ссылки со счётчиком в шапке (#cart-link).
+{% endcomment %}
+{% include 'partials/cart_contents.html' %}
+{% include 'partials/cart_link.html' with cart_oob=True cart_count=contents.total_items %}

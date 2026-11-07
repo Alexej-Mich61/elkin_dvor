@@ -16,6 +16,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # Главная и публичный каталог магазина
     path("", include("shop.urls")),
+    # Сессионная корзина
+    path("cart/", include("cart.urls")),
     # SEO: карта сайта и правила для роботов
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
     path(

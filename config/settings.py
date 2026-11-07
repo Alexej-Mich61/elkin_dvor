@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     # Наши приложения
     'theme',  # Стили Tailwind
     'shop', # <--- приложение магазина
+    'cart', # <--- сессионная корзина
 ]
 
 # Dev-only приложения подключаем только при DEBUG, не попадают в production
@@ -75,6 +76,8 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 # Контакты магазина (телефон, мессенджеры, адрес) для всех страниц
                 "shop.context_processors.contacts",
+                # Счётчик товаров в корзине для шапки
+                "cart.context_processors.cart_counter",
             ],
         },
     },

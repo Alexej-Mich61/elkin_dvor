@@ -1,0 +1,13 @@
+{% comment %}
+  Ссылка на корзину со счётчиком: используется в шапке и как OOB-фрагмент
+  в ответах HTMX (cart_oob=True добавляет hx-swap-oob для замены по id).
+  Требует cart_count в контексте.
+{% endcomment %}
+<a href="{% url 'cart:detail' %}" id="cart-link"{% if cart_oob %} hx-swap-oob="true"{% endif %}
+   aria-label="Корзина{% if cart_count %}: {{ cart_count }} шт.{% endif %}"
+   class="relative inline-flex p-2 text-cream/90 transition hover:text-cream">
+    {% include 'includes/icon.html' with icon='cart' class_name='w-7 h-7' %}
+    <span id="cart-counter" class="absolute -right-1 -top-1">
+        {% include 'partials/cart_badge.html' %}
+    </span>
+</a>

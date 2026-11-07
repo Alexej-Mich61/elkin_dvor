@@ -4,10 +4,10 @@
 Интернет-магазин живых новогодних ёлок с доставкой (Ростов-на-Дону). Без онлайн-оплаты:
 посетитель оформляет заказ → клиент и менеджер получают письмо с номером заказа →
 оплата наличными при доставке. В планах: промокоды и акции.
-Стадия: выполнены этапы 0 (основа), 1 (модели каталога и админка) и 2 (публичная главная,
-страницы категорий/товаров, SEO-основа: title/description/canonical, JSON-LD Product,
-sitemap.xml, robots.txt). Корзина и собственные формы заказа пока не реализованы;
-следующий — этап 3.
+Стадия: выполнены этапы 0 (основа), 1 (модели каталога и админка),
+2 (публичная главная, страницы категорий/товаров, SEO-основа) и
+3 (сессионная корзина: добавление, количество, удаление, HTMX + обычные POST).
+Оформление заказа и промокоды пока не реализованы; следующий — этап 4.
 
 ## Документация
 - [ROADMAP.md](ROADMAP.md) — порядок этапов, задачи, критерии готовности и текущие отметки выполнения.
@@ -53,7 +53,18 @@ venv/Scripts/python.exe manage.py check
   - `sitemaps.py` (Category/Product для sitemap.xml), `context_processors.py` (контакты магазина
     на всех страницах: телефон, мессенджеры, адрес — править там), `templatetags/shop_extras.py`
     (формат цен, диапазон цен, размеры, основное изображение).
-- `cart/`, `orders/` — целевые приложения по `docs/architecture.md`; пока не созданы.
+- `cart/` — сессионная корзина (этап 3):
+  - `services.py` — класс `Cart` поверх сессии: хранятся только `{variant_id: quantity}`,
+    цены/суммы каждый раз считаются по актуальному каталогу (`Cart.contents()`);
+    операции `add/set_quantity/remove/clear`; потолок позиции `MAX_LINE_QUANTITY = 100`,
+    при `stock > 0` лимит = остаток (обрезание с заметкой в интерфейсе);
+  - `views.py` — тонкие views (страница корзины, add/update/remove/clear):
+    HTMX-ответы через partials с OOB-обновлением счётчика в шапке (`#cart-link`),
+    без HTMX — POST/Redirect/GET на страницу корзины;
+  - `forms.py` (`AddToCartForm` — валидация активности варианта), `urls.py`,
+    `context_processors.py` (`cart_count` для шапки, без запросов к БД),
+    `tests.py` (операции корзины и HTTP-сценарии).
+- `orders/` — целевое приложение по `docs/architecture.md`; пока не создано.
 - `theme/` — Tailwind-приложение (django-tailwind):
   - `static_src/` — источники: `src/styles.css`, `package.json`; там же `node_modules`;
   - `static/css/dist/styles.css` — собранный CSS (генерируется, вручную не править).
@@ -79,6 +90,11 @@ venv/Scripts/python.exe manage.py check
 - `/catalog/<category_slug>/` — `shop.views.category_detail`, name=`shop:category`.
 - `/catalog/<category_slug>/<product_slug>/` — `shop.views.product_detail`, name=`shop:product`.
 - `/catalog/<category_slug>/<product_slug>/price/?variant=<id>` — HTMX-фрагмент цены, name=`shop:variant_price`.
+- `/cart/` — страница корзины, name=`cart:detail`.
+- `/cart/add/` — добавление в корзину (POST), name=`cart:add`.
+- `/cart/update/<variant_id>/` — изменение количества (POST, quantity в value кнопки «−»/«+»), name=`cart:update`.
+- `/cart/remove/<variant_id>/` — удаление позиции (POST), name=`cart:remove`.
+- `/cart/clear/` — очистка корзины (POST), name=`cart:clear`.
 - `/sitemap.xml`, `/robots.txt` — SEO (django.contrib.sitemaps; домен сайта задаётся в админке Sites).
 - `/admin/` — стандартная админка Django.
 - `__reload__/` и раздача `/media/` — подключаются только при `DEBUG=True`.
@@ -110,6 +126,14 @@ venv/Scripts/python.exe manage.py check
   Фирменная палитра (зелёный/красный/сливочный) и декоративный класс `bg-snow` заданы
   в `styles.css` поверх встроенной темы daisyUI; шрифт Nunito подключается в `base.html`.
 - В `base.html` CSS подключается тегом `{% tailwind_css %}`, скрипты — Alpine.js и HTMX (CDN).
+- Корзина сессионная: в сессии только `{variant_id: quantity}`; вся логика — в
+  `cart/services.py`, views не содержат логики изменения сессии. Подробности — §8 `docs/architecture.md`.
+- HTMX 2.x по умолчанию НЕ свопает ответы 4xx/5xx. В `base.html` через
+  `<meta name="htmx-config">` для статуса 422 разрешён swap — views корзины
+  возвращают фрагменты с ошибками валидации (показываются в цели запроса).
+  Счётчик в шапке обновляется out-of-band (`hx-swap-oob` на `#cart-link`).
+- Кнопки «−»/«+» в корзине — submit-кнопки с `name="quantity"` и value=новое
+  количество: работают и без JavaScript, и с HTMX (htmx шлёт value нажатой кнопки).
 - Разделение ответственности: HTMX — серверные действия (размер/цена, корзина, счётчик,
   промокод, checkout); Alpine.js — только локальное UI-состояние (мобильное меню, модалки,
   галерея). Alpine не дублирует состояние корзины и цен. Подробности — `docs/architecture.md` §11.
@@ -132,6 +156,9 @@ venv/Scripts/python.exe manage.py check
   (демо django-tailwind) — не путать.
 - `django_browser_reload` (приложение, middleware, URL) подключается только при `DEBUG=True`;
   в production его нет.
+- Django кэширует скомпилированные шаблоны в памяти процесса; при `runserver --noreload`
+  правки шаблонов НЕ подхватываются (stat-автоинвалидация не работает) — сервер
+  нужно перезапускать вручную, иначе ручная проверка увидит старые partials.
 - Локаль `ru-ru`, зона `Europe/Moscow`; `USE_TZ=True` — в БД время в UTC, показ по Москве.
 - `ALLOWED_HOSTS` читается из `.env`; с `DEBUG=False` без него — ошибки.
 - Линтер не настроен — минимальная проверка: `manage.py check` и `manage.py test`.
