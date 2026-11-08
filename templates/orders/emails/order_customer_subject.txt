@@ -1,0 +1,1 @@
+Заказ {{ order.number }} принят — {{ shop_name }}

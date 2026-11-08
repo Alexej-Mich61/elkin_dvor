@@ -3,22 +3,30 @@
 Покрываем: нормализацию и формат кода, границы периода действия и
 минимальной суммы, округление скидки и неотрицательный итог.
 """
+import smtplib
 from datetime import timedelta
 from decimal import Decimal
+from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core import mail
 from django.core.exceptions import ValidationError
-from django.test import Client, TestCase
+from django.core.management import call_command
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from shop.models import Category, Product, ProductVariant
 
+from .emails import MAX_ATTEMPTS, queue_order_emails
 from .forms import CheckoutForm
 from .models import (
     Customer,
     Order,
+    OutgoingEmail,
     PromoCode,
+    ShopSettings,
     build_order_number,
     normalize_email,
     normalize_phone,
@@ -599,3 +607,317 @@ class OrderAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Сосна крымская")
         self.assertContains(response, "1,5 м")
+
+
+# --- Этап 6: почтовая очередь -------------------------------------------------
+
+MANAGER_EMAIL = "contracts-2025@mail.ru"
+
+
+def setup_catalog(cls):
+    cls.category = Category.objects.create(name="Сосны")
+    cls.product = Product.objects.create(category=cls.category, name="Сосна крымская")
+    cls.variant = ProductVariant.objects.create(
+        product=cls.product, size="1,5 м", price=Decimal("3900.00")
+    )
+
+
+def setup_manager_email():
+    solo = ShopSettings.get_solo()
+    solo.manager_email = MANAGER_EMAIL
+    solo.save()
+
+
+class OrderEmailQueueTests(TestCase):
+    """Постановка писем в очередь в одной транзакции с заказом."""
+
+    def setUp(self):
+        setup_catalog(self)
+        setup_manager_email()
+
+    def make_order(self, email="maria@example.com", promo_code=None, note=""):
+        return create_order(
+            lines=[(self.variant.pk, 1)],
+            promo_code=promo_code,
+            **{**CONTACT, "email": email, "note": note},
+        )
+
+    def test_two_emails_queued_for_customer_and_manager(self):
+        order = self.make_order()
+        self.assertEqual(OutgoingEmail.objects.count(), 2)
+        customer = OutgoingEmail.objects.get(kind=OutgoingEmail.KIND_CUSTOMER)
+        manager = OutgoingEmail.objects.get(kind=OutgoingEmail.KIND_MANAGER)
+        self.assertEqual(customer.to, "maria@example.com")
+        self.assertEqual(manager.to, MANAGER_EMAIL)
+        self.assertEqual(customer.order_number, order.number)
+        self.assertEqual(customer.order, order)
+        # Свежие записи готовы к отправке.
+        self.assertEqual(customer.status, OutgoingEmail.STATUS_PENDING)
+        self.assertEqual(customer.attempts, 0)
+        self.assertIsNone(customer.next_attempt_at)
+        self.assertNotEqual(customer.key, manager.key)
+
+    def test_email_bodies_contain_full_order_info(self):
+        order = self.make_order(note="После 18:00")
+        customer = OutgoingEmail.objects.get(kind=OutgoingEmail.KIND_CUSTOMER)
+        for body in (customer.body_text, customer.body_html):
+            for fragment in (
+                order.number,
+                "Сосна крымская",
+                "1,5 м",
+                "3900",
+                CONTACT["address"],
+                CONTACT["phone"],
+                "После 18:00",
+            ):
+                self.assertIn(fragment, body)
+        self.assertIn(order.number, customer.subject)
+        manager = OutgoingEmail.objects.get(kind=OutgoingEmail.KIND_MANAGER)
+        self.assertIn("Новый заказ", manager.subject)
+        self.assertIn(order.number, manager.body_text)
+
+    def test_promo_mentioned_in_email(self):
+        promo = make_promo(code="ЁЛКА10", discount_value=Decimal("10"))
+        self.make_order(promo_code=promo.code)
+        customer = OutgoingEmail.objects.get(kind=OutgoingEmail.KIND_CUSTOMER)
+        self.assertIn("ЁЛКА10", customer.body_text)
+        self.assertIn("390", customer.body_text)  # скидка 10% от 3900
+
+    def test_customer_email_skipped_without_email(self):
+        self.make_order(email="")
+        self.assertEqual(OutgoingEmail.objects.count(), 1)
+        self.assertEqual(
+            OutgoingEmail.objects.get().kind, OutgoingEmail.KIND_MANAGER
+        )
+
+    def test_manager_email_skipped_without_settings(self):
+        solo = ShopSettings.get_solo()
+        solo.manager_email = ""
+        solo.save()
+        self.make_order()
+        self.assertEqual(OutgoingEmail.objects.count(), 1)
+        self.assertEqual(
+            OutgoingEmail.objects.get().kind, OutgoingEmail.KIND_CUSTOMER
+        )
+
+    def test_queue_idempotent_by_key(self):
+        order = self.make_order()
+        queue_order_emails(order)
+        self.assertEqual(OutgoingEmail.objects.count(), 2)
+
+    def test_queue_rolls_back_with_order(self):
+        # Ошибка постановки в очередь откатывает и заказ, и письма:
+        # нет заказа без писем и писем без заказа.
+        with mock.patch(
+            "orders.services.queue_order_emails", side_effect=RuntimeError("boom")
+        ):
+            with self.assertRaises(RuntimeError):
+                self.make_order()
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertEqual(OutgoingEmail.objects.count(), 0)
+
+
+class SendOrderEmailsCommandTests(TestCase):
+    """Обработчик очереди: отправка, повторные попытки, отказ, партии."""
+
+    def setUp(self):
+        setup_catalog(self)
+        setup_manager_email()
+
+    def make_order(self, email="maria@example.com"):
+        return create_order(
+            lines=[(self.variant.pk, 1)],
+            promo_code=None,
+            **{**CONTACT, "email": email},
+        )
+
+    def run_command(self, **options):
+        """Запуск команды с подменой SMTP-отправки; возвращает mock send()."""
+        patcher = mock.patch("orders.emails.EmailMultiAlternatives.send")
+        send_mock = patcher.start()
+        self.addCleanup(patcher.stop)
+        call_command("send_order_emails", **options)
+        return send_mock
+
+    def make_pending_email(self, key="test:pending", **kwargs):
+        defaults = {
+            "order": None,
+            "order_number": "ЁД-2026-999999",
+            "kind": OutgoingEmail.KIND_CUSTOMER,
+            "key": key,
+            "to": "x@example.com",
+            "subject": "Тема",
+            "body_text": "текст",
+        }
+        defaults.update(kwargs)
+        return OutgoingEmail.objects.create(**defaults)
+
+    def test_sends_queued_emails_and_marks_sent(self):
+        self.make_order()
+        send_mock = self.run_command()
+        self.assertEqual(send_mock.call_count, 2)
+        for m in OutgoingEmail.objects.all():
+            self.assertEqual(m.status, OutgoingEmail.STATUS_SENT)
+            self.assertIsNotNone(m.sent_at)
+            self.assertEqual(m.attempts, 1)
+            self.assertEqual(m.last_error, "")
+        # Повторный запуск не шлёт уже отправленные письма.
+        send_mock = self.run_command()
+        send_mock.assert_not_called()
+
+    def test_command_logs_result(self):
+        self.make_order()
+        with self.assertLogs("orders.mail", level="INFO") as cm:
+            self.run_command()
+        self.assertTrue(any("Отправлено письмо" in m for m in cm.output))
+
+    def test_batch_limit(self):
+        self.make_order(email="a@example.com")
+        self.make_order(email="b@example.com")
+        send_mock = self.run_command(batch=3)
+        self.assertEqual(send_mock.call_count, 3)
+        self.assertEqual(
+            OutgoingEmail.objects.filter(status=OutgoingEmail.STATUS_SENT).count(), 3
+        )
+        self.assertEqual(
+            OutgoingEmail.objects.filter(status=OutgoingEmail.STATUS_PENDING).count(),
+            1,
+        )
+
+    def test_temporary_error_schedules_retry(self):
+        m = self.make_pending_email()
+        with mock.patch(
+            "orders.emails.EmailMultiAlternatives.send",
+            side_effect=Exception("SMTP: connection refused"),
+        ):
+            call_command("send_order_emails")
+        m.refresh_from_db()
+        self.assertEqual(m.status, OutgoingEmail.STATUS_PENDING)
+        self.assertEqual(m.attempts, 1)
+        self.assertGreater(m.next_attempt_at, timezone.now())
+        self.assertIn("connection refused", m.last_error)
+
+    def test_future_retry_not_taken_yet(self):
+        m = self.make_pending_email(
+            key="test:future",
+            next_attempt_at=timezone.now() + timedelta(hours=1),
+        )
+        send_mock = self.run_command()
+        send_mock.assert_not_called()
+        m.refresh_from_db()
+        self.assertEqual(m.status, OutgoingEmail.STATUS_PENDING)
+
+    def test_permanent_error_fails_immediately(self):
+        m = self.make_pending_email(key="test:permanent")
+        with mock.patch(
+            "orders.emails.EmailMultiAlternatives.send",
+            side_effect=smtplib.SMTPAuthenticationError(535, b"auth failed"),
+        ):
+            call_command("send_order_emails")
+        m.refresh_from_db()
+        self.assertEqual(m.status, OutgoingEmail.STATUS_FAILED)
+        self.assertEqual(m.attempts, 1)
+        self.assertIsNone(m.next_attempt_at)
+
+    def test_attempts_exhausted_marks_failed(self):
+        m = self.make_pending_email(key="test:exhausted", attempts=MAX_ATTEMPTS - 1)
+        with mock.patch(
+            "orders.emails.EmailMultiAlternatives.send",
+            side_effect=Exception("SMTP: timeout"),
+        ):
+            call_command("send_order_emails")
+        m.refresh_from_db()
+        self.assertEqual(m.status, OutgoingEmail.STATUS_FAILED)
+        self.assertEqual(m.attempts, MAX_ATTEMPTS)
+
+    def test_stale_sending_reclaimed(self):
+        # Письмо зависло в sending (обработчик упал): возвращаем и шлём.
+        self.make_order()
+        OutgoingEmail.objects.update(
+            status=OutgoingEmail.STATUS_SENDING,
+            updated_at=timezone.now() - timedelta(minutes=30),
+        )
+        send_mock = self.run_command()
+        self.assertEqual(send_mock.call_count, 2)
+        self.assertEqual(
+            OutgoingEmail.objects.filter(status=OutgoingEmail.STATUS_SENT).count(), 2
+        )
+
+    def test_sends_via_configured_mailer(self):
+        # Сквозной тест через реальный тестовый backend (locmem):
+        # письма уходят с темами и HTML-альтернативой.
+        self.make_order()
+        with override_settings(
+            MAILERS={
+                "default": {
+                    "BACKEND": "django.core.mail.backends.locmem.EmailBackend",
+                }
+            }
+        ):
+            call_command("send_order_emails")
+        self.assertEqual(len(mail.outbox), 2)
+        for message in mail.outbox:
+            self.assertIn("ЁД-", message.subject)
+            self.assertEqual(message.from_email, settings.DEFAULT_FROM_EMAIL)
+            self.assertTrue(
+                any(mime == "text/html" for _, mime in message.alternatives)
+            )
+
+
+class OutgoingEmailAdminTests(TestCase):
+    """Админка почтовой очереди и настроек магазина."""
+
+    def setUp(self):
+        setup_catalog(self)
+        setup_manager_email()
+        self.staff = User.objects.create_user(
+            username="manager", password="pass", is_staff=True, is_superuser=True
+        )
+        self.client.force_login(self.staff)
+        self.order = create_order(
+            lines=[(self.variant.pk, 1)],
+            promo_code=None,
+            **{**CONTACT, "email": "maria@example.com"},
+        )
+        self.email = OutgoingEmail.objects.get(kind=OutgoingEmail.KIND_CUSTOMER)
+
+    def test_changelist_renders_with_filters(self):
+        response = self.client.get(reverse("admin:orders_outgoingemail_changelist"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.email.to)
+        response = self.client.get(
+            reverse("admin:orders_outgoingemail_changelist"),
+            {"status__exact": OutgoingEmail.STATUS_PENDING},
+        )
+        self.assertContains(response, self.email.to)
+
+    def test_requeue_action_resets_failed_email(self):
+        self.email.status = OutgoingEmail.STATUS_FAILED
+        self.email.attempts = MAX_ATTEMPTS
+        self.email.save()
+        response = self.client.post(
+            reverse("admin:orders_outgoingemail_changelist"),
+            {"action": "requeue", "_selected_action": [self.email.pk]},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.email.refresh_from_db()
+        self.assertEqual(self.email.status, OutgoingEmail.STATUS_PENDING)
+        self.assertEqual(self.email.attempts, 0)
+
+    def test_order_change_page_shows_email_inline(self):
+        response = self.client.get(
+            reverse("admin:orders_order_change", args=[self.order.pk])
+        )
+        self.assertContains(response, self.email.to)
+        self.assertContains(response, "Исходящие письма")
+
+    def test_shop_settings_admin_page(self):
+        # Настройки магазина (email менеджера) доступны в админке.
+        response = self.client.get(reverse("admin:orders_shopsettings_changelist"))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(
+            reverse("admin:orders_shopsettings_change", args=[1])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, MANAGER_EMAIL)

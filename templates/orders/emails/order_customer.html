@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>{{ order.number }}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f7f3ea; font-family:Arial, Helvetica, sans-serif; color:#2f2a24;">
+  <div style="max-width:600px; margin:0 auto; padding:24px 16px;">
+    <div style="background:#166534; color:#ffffff; border-radius:12px 12px 0 0; padding:20px 24px;">
+      <div style="font-size:20px; font-weight:bold;">{{ shop_name }}</div>
+      <div style="font-size:13px; opacity:.85;">Живые новогодние ёлки с доставкой</div>
+    </div>
+    <div style="background:#ffffff; padding:24px; border:1px solid #e5ddcc; border-top:none; border-radius:0 0 12px 12px;">
+      <p style="margin:0 0 8px; font-size:16px;">Здравствуйте, {{ order.name }}!</p>
+      <p style="margin:0 0 16px; font-size:14px; line-height:1.5;">
+        Спасибо за заказ! Мы получили его и позвоним по номеру
+        <strong>{{ order.phone }}</strong>, чтобы подтвердить доставку.
+      </p>
+      <p style="margin:0 0 12px; font-size:14px;">
+        Заказ <strong>{{ order.number }}</strong> от {{ date }}
+      </p>
+      <table style="width:100%; border-collapse:collapse; font-size:14px; margin:0 0 16px;">
+        {% for item in items %}
+        <tr>
+          <td style="padding:8px 0; border-bottom:1px solid #eee5d5;">
+            {{ item.name }} <span style="color:#8a8272;">({{ item.size }})</span><br>
+            <span style="color:#8a8272; font-size:12px;">{{ item.unit_price }} руб. × {{ item.quantity }}</span>
+          </td>
+          <td style="padding:8px 0; border-bottom:1px solid #eee5d5; text-align:right; white-space:nowrap;">
+            {{ item.total_price }} руб.
+          </td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td style="padding:8px 0; color:#5b5344;">Подытог</td>
+          <td style="padding:8px 0; text-align:right;">{{ subtotal }} руб.</td>
+        </tr>
+        {% if order.promo_code %}
+        <tr>
+          <td style="padding:8px 0; color:#5b5344;">Скидка по промокоду {{ order.promo_code }}</td>
+          <td style="padding:8px 0; text-align:right; color:#b91c1c;">−{{ discount }} руб.</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td style="padding:12px 0 0; font-weight:bold;">Итого к оплате при доставке</td>
+          <td style="padding:12px 0 0; text-align:right; font-weight:bold; font-size:16px;">{{ total }} руб.</td>
+        </tr>
+      </table>
+      <p style="margin:0 0 4px; font-size:14px;"><strong>Адрес доставки:</strong> {{ order.address }}</p>
+      <p style="margin:0 0 4px; font-size:14px;"><strong>Телефон:</strong> {{ order.phone }}</p>
+      {% if order.email %}<p style="margin:0 0 4px; font-size:14px;"><strong>Email:</strong> {{ order.email }}</p>{% endif %}
+      {% if order.note %}<p style="margin:0 0 4px; font-size:14px;"><strong>Примечание:</strong> {{ order.note }}</p>{% endif %}
+      <p style="margin:16px 0 0; font-size:13px; color:#5b5344;">
+        Оплата — наличными при доставке. Остались вопросы? Позвоните нам:
+        <a href="tel:{{ shop_phone_tel }}" style="color:#166534;">{{ shop_phone }}</a>.
+      </p>
+    </div>
+    <p style="margin:16px 0 0; font-size:12px; color:#8a8272; text-align:center;">
+      С наступающим Новым годом! · «{{ shop_name }}» · {{ shop_address }}
+    </p>
+  </div>
+</body>
+</html>

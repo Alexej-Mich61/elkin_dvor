@@ -6,9 +6,10 @@
 оплата наличными при доставке. В планах: промокоды и акции.
 Стадия: выполнены этапы 0 (основа), 1 (модели каталога и админка),
 2 (публичная главная, страницы категорий/товаров, SEO-основа),
-3 (сессионная корзина), 4 (промокоды и единый расчёт) и
-5 (покупатели, оформление заказа, подтверждение, админка заказов).
-Следующий — этап 6 (почтовая очередь в БД).
+3 (сессионная корзина), 4 (промокоды и единый расчёт),
+5 (покупатели, оформление заказа, подтверждение, админка заказов) и
+6 (почтовая очередь в БД, команда `send_order_emails`, логи отправки).
+Следующий — этап 7 (работа менеджеров и администраторов).
 
 ## Документация
 - [ROADMAP.md](ROADMAP.md) — порядок этапов, задачи, критерии готовности и текущие отметки выполнения.
@@ -41,6 +42,12 @@ venv/Scripts/python.exe manage.py migrate
 # тесты
 venv/Scripts/python.exe manage.py test                  # тесты shop, cart и orders
 
+# почтовая очередь (этап 6): однократная отправка готовых писем
+venv/Scripts/python.exe manage.py send_order_emails     # до 20 писем; --batch N
+send_emails.bat                                          # то же для Windows (двойной клик)
+# регулярный запуск — через Планировщик заданий Windows (задание на send_emails.bat,
+# например раз в минуту) или cron на Linux; параллельные запуски безопасны.
+
 # проверки; отдельного линтера НЕТ, используем системные чеки Django
 venv/Scripts/python.exe manage.py check
 ```
@@ -70,20 +77,33 @@ venv/Scripts/python.exe manage.py check
     формат кода: только цифры и буквы латиницы/кириллицы), `urls.py`,
     `context_processors.py` (`cart_count` для шапки, без запросов к БД),
     `tests.py` (операции корзины, промокод, HTTP-сценарии).
-- `orders/` — промокоды, покупатели и оформление заказа (этапы 4–5):
+- `orders/` — промокоды, покупатели, оформление заказа (этапы 4–5) и
+  почтовая очередь (этап 6):
   - `models.py` — `PromoCode` (см. `PROMO_CODE_PATTERN`, `validate_for`);
     `Customer` (нормализованный телефон с индексом, email, служебная заметка;
     контакты НЕ уникальны), `Order` (публичный номер `ЁД-2026-000125`,
     статус `processing/completed/cancelled` = выполняется/выполнен/отменён,
     снимок контактов/адреса/примечания, подытог/скидка/итог, параметры
     промокода-снимок, auto created_at/updated_at), `OrderItem` (снимок
-    названия/размера/цены, служебные FK на товар/вариант `SET_NULL`);
+    названия/размера/цены, служебные FK на товар/вариант `SET_NULL`),
+    `ShopSettings` (singleton, в админке: email менеджера для писем о заказах),
+    `OutgoingEmail` (очередь: получатель/тема/текст/HTML, статус
+    `pending/sending/sent/failed`, попытки, отложенная попытка, последняя
+    ошибка, ключ идемпотентности `order:<id>:<kind>`);
   - `services.py` — единый расчёт `calculate_totals` (этап 4) и `create_order`
     (этап 5): короткая транзакция — варианты перезагружаются и проверяются
     на активность, суммы и промокод пересчитываются заново, покупатель
     ищется осторожно по нормализованному телефону (только однозначное
-    совпадение), создаются заказ, позиции и номер; письма добавятся сюда
-    на этапе 6;
+    совпадение), создаются заказ, позиции, номер и две записи почтовой
+    очереди (`queue_order_emails`);
+  - `emails.py` (этап 6) — построение писем из шаблонов, постановка в очередь
+    в транзакции заказа и обработка очереди: атомарный захват (безопасен
+    при параллельных обработчиках), повторы (`MAX_ATTEMPTS=5`, пауза
+    `RETRY_DELAY=5 мин`), постоянные SMTP-ошибки → `failed` сразу, лог
+    logger'ом `orders.mail`;
+  - `management/commands/send_order_emails.py` — отправка партии готовых
+    писем (`--batch`, по умолчанию 20); запуск — `send_emails.bat` или
+    планировщик ОС;
   - `forms.py` (`CheckoutForm` — имя/телефон/адрес обязательны, email и
     примечание необязательны, телефон: 10–15 цифр после нормализации),
     `views.py` (`checkout` — одноразовый токен в сессии против повторного
@@ -102,6 +122,8 @@ venv/Scripts/python.exe manage.py check
   - `orders/checkout.html` — форма оформления (звёздочки обязательных полей,
     текст-помощники, сводка заказа); `orders/order_success.html` — подтверждение
     с номером, составом, итогами, кнопкой «Скачать» (JSON заказа для canvas);
+  - `orders/emails/` — шаблоны писем очереди (этап 6): текст + HTML + subject
+    для покупателя (`order_customer*`) и менеджера (`order_manager*`);
   - `includes/` — повторяющиеся фрагменты (`header.html`, `footer.html`, `icon.html` — контурные SVG-иконки, `mobile_contacts_bar.html` — плавающая панель связи на мобильных);
   - `partials/` — HTMX-фрагменты и карточка товара (`product_card.html`, `variant_price.html`);
   - `robots.txt` — отдаётся через TemplateView с `text/plain`.
@@ -114,8 +136,15 @@ venv/Scripts/python.exe manage.py check
 - `scripts/demo_promos.py` — ручной дозапуск демо-промокодов (идемпотентный, `get_or_create`).
 - `ROADMAP.md` — план разработки и статусы этапов.
 - `docs/architecture.md` — целевые архитектурные договорённости.
-- `.env` — `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` (шаблон — `.env.example`); в git не коммитится.
+- `.env` — `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, параметры SMTP (`EMAIL_HOST`,
+  `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`,
+  `EMAIL_USE_SSL`, `EMAIL_TIMEOUT`, `DEFAULT_FROM_EMAIL`; шаблон — `.env.example`);
+  в git не коммитится.
 - `db.sqlite3` — локальная БД, в git не коммитится.
+- `send_emails.bat` — отправка очереди писем одним двойным кликом (этап 6);
+  для регулярной отправки добавить в Планировщик заданий Windows.
+- `logs/mail.log` — лог отправки почты (UTF-8, ротация ежедневно, 14 копий);
+  создаётся автоматически, в git не коммитится (`*.log`).
 
 ## Маршруты (config/urls.py)
 - `/` — `shop.views.home`, name=`shop:home` (данные каталога из БД).
@@ -161,7 +190,16 @@ venv/Scripts/python.exe manage.py check
 - Конфиг — через `.env` (`python-dotenv`, `load_dotenv()` в начале settings).
   Без `SECRET_KEY` в `.env` проект не стартует. `DEBUG=True` только из `.env`.
 - Email настраивается через `MAILERS = {"default": {...}}` (новый интерфейс Django 6.1,
-  не классический `EMAIL_BACKEND`); сейчас стоит `console.EmailBackend` — письма в консоль.
+  не классический `EMAIL_BACKEND`). Параметры mailer'а собираются в settings из `.env`:
+  задан `EMAIL_HOST` → SMTP-backend (`OPTIONS`: host/port/username/password/use_tls/
+  use_ssl/timeout; `use_tls` и `use_ssl` несовместимы), иначе `console.EmailBackend` —
+  письма в консоль, для локальной разработки этого достаточно.
+- Почта уходит только через очередь: `create_order` лишь ставит две записи
+  `OutgoingEmail` (покупателю — если указан email, менеджеру — на адрес из
+  `ShopSettings` в админке); SMTP делает `manage.py send_order_emails`.
+- Отправка почты логируется всегда (dev и prod) logger'ом `orders.mail` в
+  консоль и `logs/mail.log`. В логе — получатель, номер заказа, результат;
+  секретов и тел писем нет.
 - Стили: править только `theme/static_src/src/styles.css`; сборку доводить до
   `theme/static/css/dist/` (команды выше). Классы Tailwind/daisyUI — в шаблонах.
   Фирменная палитра (зелёный/красный/сливочный) и декоративный класс `bg-snow` заданы
@@ -218,8 +256,13 @@ venv/Scripts/python.exe manage.py check
   `manage.py shell -c "exec(compile(open('scripts/x.py', encoding='utf-8').read(), 'x.py', 'exec'))"`.
 - Нормализация промокода — только trim + верхний регистр: «Ё» и «Е» считаются
   разными символами, код «ЁЛКА10» не совпадёт с «ЕЛКА10».
-- Контакты (телефон, Telegram/WhatsApp, адрес) живут в `shop/context_processors.py`;
+- Контакты (телефон, Telegram/WhatsApp, адрес) живут в константе `SHOP_CONTACTS`
+  в `shop/context_processors.py` (её же используют письма из `orders/emails.py`);
   ссылка Telegram — заглушка `https://t.me/elkin_dvor`, заменить на реальную.
+- `send_emails.bat` включает `chcp 65001` и `PYTHONUTF8=1`: без этого console
+  backend может упасть с `[Errno 22] Invalid argument` при выводе кириллицы
+  в чужую консоль/лог планировщика — письмо тогда уйдёт в повтор, а не в sent.
+  Своими запусками `manage.py send_order_emails` учитывай то же самое.
 
 ## Завершение итерации
 - Запустить `manage.py check` и относящиеся к изменениям тесты.

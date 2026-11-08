@@ -1,0 +1,17 @@
+Новый заказ {{ order.number }} от {{ date }}
+
+Покупатель: {{ order.name }}
+Телефон: {{ order.phone }}
+{% if order.email %}Email: {{ order.email }}
+{% endif %}Адрес доставки: {{ order.address }}
+{% if order.note %}Примечание: {{ order.note }}
+{% endif %}
+Состав заказа:
+{% for item in items %}- {{ item.name }} ({{ item.size }}) × {{ item.quantity }} — {{ item.total_price }} руб.
+{% endfor %}
+Подытог: {{ subtotal }} руб.
+{% if order.promo_code %}Скидка по промокоду {{ order.promo_code }}: {{ discount }} руб.
+{% endif %}Итого: {{ total }} руб.
+
+Оплата — наличными при доставке.
+Письмо сформировано автоматически (магазин «{{ shop_name }}»).

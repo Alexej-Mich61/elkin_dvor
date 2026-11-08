@@ -1,0 +1,24 @@
+Здравствуйте, {{ order.name }}!
+
+Спасибо за заказ в магазине «{{ shop_name }}»! Мы получили его и
+позвоним по номеру {{ order.phone }}, чтобы подтвердить доставку.
+
+Заказ {{ order.number }} от {{ date }}
+
+Состав заказа:
+{% for item in items %}- {{ item.name }} ({{ item.size }}) × {{ item.quantity }} — {{ item.total_price }} руб.
+{% endfor %}
+Подытог: {{ subtotal }} руб.
+{% if order.promo_code %}Скидка по промокоду {{ order.promo_code }}: {{ discount }} руб.
+{% endif %}Итого к оплате при доставке: {{ total }} руб.
+
+Адрес доставки: {{ order.address }}
+Телефон: {{ order.phone }}
+{% if order.email %}Email: {{ order.email }}
+{% endif %}{% if order.note %}Примечание к заказу: {{ order.note }}
+{% endif %}
+Оплата — наличными при доставке.
+Остались вопросы? Позвоните нам: {{ shop_phone }}.
+
+С наступающим Новым годом!
+«{{ shop_name }}» · {{ shop_address }} · {{ shop_phone }}

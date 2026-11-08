@@ -449,6 +449,37 @@ Management-команда `send_order_emails`:
 
 Локально используется console backend. Реальные SMTP-параметры поступают из `.env` через действующий для проекта интерфейс `MAILERS`. Пароли не попадают в Git, шаблоны писем или логи.
 
+**Решение (этап 6):** очередь реализована в `orders` — `OutgoingEmail`
+(получатель, тема, текст/HTML, статусы `pending/sending/sent/failed`,
+`attempts`, `next_attempt_at`, `sent_at`, `last_error`, снимок `order_number`,
+ключ идемпотентности `order:<id>:customer|manager`) и singleton `ShopSettings`
+(email менеджера редактируется в админке). Две записи создаются в той же
+транзакции, что и заказ (`orders.services.create_order` →
+`orders.emails.queue_order_emails`); письмо покупателю ставится только при
+указанном email, письмо менеджеру — только при заполненном адресе в настройках.
+Тела писем рендерятся из шаблонов `templates/orders/emails/` (text + HTML).
+
+Обработчик — `manage.py send_order_emails` (`--batch`, по умолчанию 20):
+захват каждого письма атомарным `UPDATE` с проверкой статуса, поэтому
+одновременные запуски (несколько воркеров, пересекающиеся вызовы
+планировщика) не обрабатывают одну запись дважды; зависшие в `sending`
+записи возвращаются в очередь после 15 минут тишины. Повторы: до
+`MAX_ATTEMPTS = 5` попыток с паузой `RETRY_DELAY = 5 минут`; постоянные
+ошибки (ошибка авторизации SMTP, отказ в получателе, код 5xx) переводят
+письмо в `failed` без повторов. В админке письма доступны только для чтения,
+`failed` можно вернуть в очередь действием.
+
+Отправка и постановка в очередь журналируются logger'ом `orders.mail`
+(консоль + `logs/mail.log`, ротация ежедневно): получатель, номер заказа,
+результат — без секретов и тел писем. Конфигурация mailer'а собирается
+в settings из `.env`: при заданном `EMAIL_HOST` — SMTP с параметрами
+`EMAIL_PORT/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD/EMAIL_USE_TLS/EMAIL_USE_SSL/
+EMAIL_TIMEOUT`, иначе console backend; отправитель — `DEFAULT_FROM_EMAIL`.
+Регулярный запуск обработчика — задание Планировщика Windows на
+`send_emails.bat` (внутри `chcp 65001` и `PYTHONUTF8=1` — иначе console
+backend падает с ошибкой кодировки при выводе кириллицы в чужую консоль)
+или cron на Linux.
+
 ## 11. Views, шаблоны, HTMX и Alpine.js
 
 ### Views

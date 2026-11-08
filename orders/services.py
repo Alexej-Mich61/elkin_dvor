@@ -14,8 +14,9 @@
 Создание заказа (create_order) — короткая транзакция: варианты перезагружаются
 и проверяются на активность, суммы и промокод пересчитываются заново,
 покупатель ищется осторожно по нормализованному телефону, создаются заказ,
-его позиции и публичный номер. Почтовые записи добавятся сюда на этапе 6.
-См. docs/architecture.md §6–7, §9.
+его позиции, публичный номер и две записи почтовой очереди (покупателю и
+менеджеру) — orders.emails.queue_order_emails. SMTP в транзакции нет.
+См. docs/architecture.md §6–7, §9–10.
 """
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
@@ -23,6 +24,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from .emails import queue_order_emails
 from .models import (
     Customer,
     Order,
@@ -210,4 +212,8 @@ def create_order(*, lines, promo_code, name, phone, email, address, note, now=No
         )
         for variant, quantity in available
     )
+
+    # Письма покупателю и менеджеру встают в очередь в той же транзакции:
+    # откат заказа уносит и их. SMTP здесь нет — его делает send_order_emails.
+    queue_order_emails(order)
     return order

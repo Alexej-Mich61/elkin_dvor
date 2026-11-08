@@ -405,3 +405,126 @@ class OrderItem(models.Model):
 def build_order_number(order_pk, year):
     """Публичный номер заказа: «ЁД-2026-000125». См. architecture.md §6."""
     return f"ЁД-{year}-{order_pk:06d}"
+
+
+# --- Почтовая очередь (этап 6) -----------------------------------------------
+
+EMAIL_MAX_LENGTH = 254
+EMAIL_SUBJECT_MAX_LENGTH = 255
+EMAIL_KEY_MAX_LENGTH = 80
+
+
+class ShopSettings(models.Model):
+    """Служебные настройки магазина. Хранится ровно одна запись (singleton);
+    редактируется через админку. См. docs/architecture.md §10."""
+
+    manager_email = models.EmailField(
+        "Email менеджера",
+        max_length=EMAIL_MAX_LENGTH,
+        blank=True,
+        help_text="Сюда уходит письмо о каждом новом заказе. Если пусто — "
+        "письмо магазину не ставится в очередь (в логе будет предупреждение).",
+    )
+    updated_at = models.DateTimeField("Обновлены", auto_now=True)
+
+    class Meta:
+        verbose_name = "Настройки магазина"
+        verbose_name_plural = "Настройки магазина"
+
+    def save(self, *args, **kwargs):
+        # Singleton: всегда одна и та же запись с pk=1.
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        """Единственная запись настроек; создаётся при первом обращении."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Настройки магазина"
+
+
+class OutgoingEmail(models.Model):
+    """Одно исходящее письмо: поставлено в очередь вместе с заказом,
+    отправляется отдельной командой вне транзакции заказа.
+
+    Статусы: pending — ждёт отправки; sending — захвачено обработчиком;
+    sent — отправлено; failed — попытки исчерпаны. Технический ключ
+    защищает от повторной постановки того же письма. См. §10."""
+
+    KIND_CUSTOMER = "customer"
+    KIND_MANAGER = "manager"
+    KIND_CHOICES = (
+        (KIND_CUSTOMER, "Покупателю"),
+        (KIND_MANAGER, "Менеджеру"),
+    )
+
+    STATUS_PENDING = "pending"
+    STATUS_SENDING = "sending"
+    STATUS_SENT = "sent"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "В очереди"),
+        (STATUS_SENDING, "Отправляется"),
+        (STATUS_SENT, "Отправлено"),
+        (STATUS_FAILED, "Ошибка"),
+    )
+
+    order = models.ForeignKey(
+        Order,
+        verbose_name="Заказ",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="outgoing_emails",
+        editable=False,
+        help_text="Связь служебная: удаление заказа запись письма не стирает.",
+    )
+    # Снимок номера: письмо остаётся идентифицируемым даже после удаления заказа.
+    order_number = models.CharField(
+        "Номер заказа", max_length=32, editable=False, db_index=True
+    )
+    kind = models.CharField(
+        "Тип", max_length=16, choices=KIND_CHOICES, editable=False
+    )
+    key = models.CharField(
+        "Ключ идемпотентности",
+        max_length=EMAIL_KEY_MAX_LENGTH,
+        unique=True,
+        editable=False,
+        help_text="Технический ключ вида «order:12:customer»: не даёт поставить "
+        "одно и то же письмо дважды.",
+    )
+    to = models.EmailField("Получатель", max_length=EMAIL_MAX_LENGTH)
+    subject = models.CharField("Тема", max_length=EMAIL_SUBJECT_MAX_LENGTH)
+    body_text = models.TextField("Текстовое тело")
+    body_html = models.TextField("HTML-тело", blank=True)
+    status = models.CharField(
+        "Статус",
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+    attempts = models.PositiveIntegerField("Попыток отправки", default=0)
+    next_attempt_at = models.DateTimeField(
+        "Следующая попытка",
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Пусто — отправить при ближайшем запуске обработчика.",
+    )
+    sent_at = models.DateTimeField("Отправлено", null=True, blank=True)
+    last_error = models.TextField("Последняя ошибка", blank=True)
+    created_at = models.DateTimeField("Создано", auto_now_add=True)
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Исходящее письмо"
+        verbose_name_plural = "Исходящие письма"
+
+    def __str__(self):
+        return f"{self.subject} → {self.to}"

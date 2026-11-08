@@ -1,13 +1,23 @@
-"""Админка промокодов, заказов и покупателей.
+"""Админка промокодов, заказов, покупателей и почтовой очереди.
 
 Заказы: фильтр по статусу и дате, поиск по номеру, имени, телефону, email
 и адресу. Контактный и денежный снимок заказа исторический — в админке
 только для чтения; менять вручную можно только статус (выполнен/отменён).
+Письма очереди — только для чтения; failed можно вернуть в очередь действием.
 """
 from django.contrib import admin
 from django.db.models import Count
+from django.utils import timezone
 
-from .models import Customer, Order, OrderItem, PromoCode, format_amount
+from .models import (
+    Customer,
+    Order,
+    OrderItem,
+    OutgoingEmail,
+    PromoCode,
+    ShopSettings,
+    format_amount,
+)
 
 
 @admin.register(PromoCode)
@@ -52,6 +62,26 @@ class OrderItemInline(admin.TabularInline):
         return False
 
 
+class OutgoingEmailInline(admin.TabularInline):
+    """Письма очереди по заказу — для диагностики, только для чтения."""
+
+    model = OutgoingEmail
+    extra = 0
+    can_delete = False
+    fields = readonly_fields = (
+        "kind",
+        "to",
+        "subject",
+        "status",
+        "attempts",
+        "sent_at",
+        "last_error",
+    )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     """Заказы: список с фильтрами и поиском; статус меняется вручную."""
@@ -67,7 +97,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ("status", "created_at")
     search_fields = ("number", "name", "phone", "email", "address")
     list_editable = ("status",)
-    inlines = (OrderItemInline,)
+    inlines = (OrderItemInline, OutgoingEmailInline)
     # Снимок оформления (контакты, адрес, деньги, промокод) — исторический:
     # после создания заказа не редактируется, только статус.
     readonly_fields = (
@@ -107,3 +137,61 @@ class CustomerAdmin(admin.ModelAdmin):
     @admin.display(description="Заказов", ordering="_orders_count")
     def orders_count(self, obj):
         return obj._orders_count
+
+
+@admin.register(OutgoingEmail)
+class OutgoingEmailAdmin(admin.ModelAdmin):
+    """Исходящая почта: только для чтения; failed возвращается в очередь действием."""
+
+    list_display = (
+        "subject",
+        "to",
+        "order_number",
+        "kind",
+        "status",
+        "attempts",
+        "next_attempt_at",
+        "sent_at",
+        "created_at",
+    )
+    list_filter = ("status", "kind")
+    search_fields = ("to", "subject", "order_number")
+    readonly_fields = (
+        "order",
+        "order_number",
+        "kind",
+        "key",
+        "to",
+        "subject",
+        "body_text",
+        "body_html",
+        "status",
+        "attempts",
+        "next_attempt_at",
+        "sent_at",
+        "last_error",
+        "created_at",
+        "updated_at",
+    )
+    actions = ("requeue",)
+
+    @admin.action(description="Вернуть выбранные письма в очередь")
+    def requeue(self, request, queryset):
+        """Сброс failed в pending: счётчик попыток с нуля, отправка при следующем запуске."""
+        updated = queryset.filter(status=OutgoingEmail.STATUS_FAILED).update(
+            status=OutgoingEmail.STATUS_PENDING,
+            attempts=0,
+            next_attempt_at=timezone.now(),
+            last_error="",
+            updated_at=timezone.now(),
+        )
+        self.message_user(request, f"В очередь возвращено писем: {updated}.")
+
+
+@admin.register(ShopSettings)
+class ShopSettingsAdmin(admin.ModelAdmin):
+    """Настройки магазина — одна запись; здесь задаётся email менеджера."""
+
+    def has_add_permission(self, request):
+        # Singleton: вторую запись создать нельзя.
+        return not ShopSettings.objects.exists()
