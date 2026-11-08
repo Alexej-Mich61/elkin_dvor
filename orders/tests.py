@@ -921,3 +921,40 @@ class OutgoingEmailAdminTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, MANAGER_EMAIL)
+
+
+class CertifiSmtpBackendTests(TestCase):
+    """SMTP-бэкенд с явным CA-набором: сборка mailer'а и SSL-контекста."""
+
+    def test_mailer_builds_ssl_context_with_ca_bundle(self):
+        import certifi
+
+        from django.core.mail import mailers
+
+        with override_settings(
+            MAILERS={
+                "default": {
+                    "BACKEND": "config.mail_backends.CertifiSMTPEmailBackend",
+                    "OPTIONS": {
+                        "host": "smtp.example.com",
+                        "cafile": certifi.where(),
+                    },
+                }
+            }
+        ):
+            connection = mailers.create_connection("default")
+        self.assertIsNotNone(connection.ssl_context)
+
+    def test_mailer_without_cafile_matches_default_behavior(self):
+        from django.core.mail import mailers
+
+        with override_settings(
+            MAILERS={
+                "default": {
+                    "BACKEND": "config.mail_backends.CertifiSMTPEmailBackend",
+                    "OPTIONS": {"host": "smtp.example.com"},
+                }
+            }
+        ):
+            connection = mailers.create_connection("default")
+        self.assertIsNotNone(connection.ssl_context)

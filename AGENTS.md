@@ -193,7 +193,10 @@ venv/Scripts/python.exe manage.py check
   не классический `EMAIL_BACKEND`). Параметры mailer'а собираются в settings из `.env`:
   задан `EMAIL_HOST` → SMTP-backend (`OPTIONS`: host/port/username/password/use_tls/
   use_ssl/timeout; `use_tls` и `use_ssl` несовместимы), иначе `console.EmailBackend` —
-  письма в консоль, для локальной разработки этого достаточно.
+  письма в консоль, для локальной разработки этого достаточно. Для SMTP подключается
+  `config.mail_backends.CertifiSMTPEmailBackend` — верификация TLS по набору certifi
+  (или файлу `EMAIL_CA_FILE`): без этого на Windows падает `CERTIFICATE_VERIFY_FAILED`
+  у серверов вроде smtp.mail.ru, чьи корни отсутствуют в системном хранилище.
 - Почта уходит только через очередь: `create_order` лишь ставит две записи
   `OutgoingEmail` (покупателю — если указан email, менеджеру — на адрес из
   `ShopSettings` в админке); SMTP делает `manage.py send_order_emails`.

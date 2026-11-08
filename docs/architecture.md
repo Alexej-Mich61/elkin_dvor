@@ -475,6 +475,10 @@ Management-команда `send_order_emails`:
 в settings из `.env`: при заданном `EMAIL_HOST` — SMTP с параметрами
 `EMAIL_PORT/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD/EMAIL_USE_TLS/EMAIL_USE_SSL/
 EMAIL_TIMEOUT`, иначе console backend; отправитель — `DEFAULT_FROM_EMAIL`.
+Для SMTP используется `config.mail_backends.CertifiSMTPEmailBackend`:
+верификация TLS идёт по набору корней certifi (или `EMAIL_CA_FILE`), потому
+что ряд серверов (smtp.mail.ru) цепочками, которых нет в системном
+хранилище Windows, иначе даёт `CERTIFICATE_VERIFY_FAILED`.
 Регулярный запуск обработчика — задание Планировщика Windows на
 `send_emails.bat` (внутри `chcp 65001` и `PYTHONUTF8=1` — иначе console
 backend падает с ошибкой кодировки при выводе кириллицы в чужую консоль)

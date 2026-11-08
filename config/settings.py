@@ -136,8 +136,19 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # SMTP-параметры читаем из .env; если EMAIL_HOST не задан — console backend:
 # письма выводятся в консоль, этого достаточно для локальной разработки.
 if os.getenv("EMAIL_HOST"):
+    # Верификацию TLS ведём по набору certifi: корни ряда SMTP-серверов
+    # (например, smtp.mail.ru) отсутствуют в системном хранилище Windows.
+    # Свой файл можно задать через EMAIL_CA_FILE.
+    try:
+        import certifi
+
+        _smtp_backend = "config.mail_backends.CertifiSMTPEmailBackend"
+        _ca_file = os.getenv("EMAIL_CA_FILE") or certifi.where()
+    except ImportError:
+        _smtp_backend = "django.core.mail.backends.smtp.EmailBackend"
+        _ca_file = os.getenv("EMAIL_CA_FILE")  # None — поведение по умолчанию
     _default_mailer = {
-        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "BACKEND": _smtp_backend,
         "OPTIONS": {
             "host": os.getenv("EMAIL_HOST"),
             "port": int(os.getenv("EMAIL_PORT", "465")),
@@ -148,6 +159,8 @@ if os.getenv("EMAIL_HOST"):
             "timeout": int(os.getenv("EMAIL_TIMEOUT", "15")),
         },
     }
+    if _ca_file:
+        _default_mailer["OPTIONS"]["cafile"] = _ca_file
 else:
     _default_mailer = {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
