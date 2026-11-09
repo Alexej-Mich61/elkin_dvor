@@ -27,3 +27,4 @@ Thumbs.db
 
 node_modules/
 theme/static_src/node_modules/
+send_emails.bat
