@@ -76,4 +76,72 @@
     <path d="M20 18l2 36h20l2-36"/>
     <path d="M28 28v14M36 28v14"/>
 </svg>
+{% elif icon == 'user' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-7 h-7' }}" aria-hidden="true">
+    <circle cx="32" cy="22" r="10"/>
+    <path d="M12 56c2-12 10-18 20-18s18 6 20 18"/>
+</svg>
+{% elif icon == 'users' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-6 h-6' }}" aria-hidden="true">
+    <circle cx="24" cy="22" r="9"/>
+    <path d="M6 54c2-11 9-16 18-16s16 5 18 16"/>
+    <path d="M42 14a9 9 0 0 1 0 16"/>
+    <path d="M48 38c6 2 9 7 10 14"/>
+</svg>
+{% elif icon == 'menu' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-7 h-7' }}" aria-hidden="true">
+    <path d="M10 18h44"/>
+    <path d="M10 32h44"/>
+    <path d="M10 46h44"/>
+</svg>
+{% elif icon == 'logout' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-7 h-7' }}" aria-hidden="true">
+    <path d="M28 8H12v48h16"/>
+    <path d="M38 22l10 10-10 10"/>
+    <path d="M48 32H24"/>
+</svg>
+{% elif icon == 'gear' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-7 h-7' }}" aria-hidden="true">
+    <circle cx="32" cy="32" r="9"/>
+    <path d="M32 10v7M32 47v7M10 32h7M47 32h7M16.4 16.4l5 5M42.6 42.6l5 5M47.6 16.4l-5 5M21.4 42.6l-5 5"/>
+</svg>
+{% elif icon == 'eye' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-5 h-5' }}" aria-hidden="true">
+    <path d="M4 32c8-12 16-18 28-18s20 6 28 18c-8 12-16 18-28 18S12 44 4 32z"/>
+    <circle cx="32" cy="32" r="8"/>
+</svg>
+{% elif icon == 'pencil' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-5 h-5' }}" aria-hidden="true">
+    <path d="M10 54l4-14L46 8l10 10L24 50l-14 4z"/>
+    <path d="M40 14l10 10"/>
+</svg>
+{% elif icon == 'download' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-5 h-5' }}" aria-hidden="true">
+    <path d="M32 8v28"/>
+    <path d="M20 26l12 12 12-12"/>
+    <path d="M10 46v10h44V46"/>
+</svg>
+{% elif icon == 'x' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-5 h-5' }}" aria-hidden="true">
+    <path d="M18 18l28 28"/>
+    <path d="M46 18L18 46"/>
+</svg>
+{% elif icon == 'home' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-6 h-6' }}" aria-hidden="true">
+    <path d="M8 32L32 10l24 22"/>
+    <path d="M14 30v24h36V30"/>
+    <path d="M26 54V40h12v14"/>
+</svg>
+{% elif icon == 'clipboard' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-6 h-6' }}" aria-hidden="true">
+    <rect x="14" y="10" width="36" height="46" rx="4"/>
+    <path d="M24 10a8 8 0 0 1 16 0"/>
+    <path d="M22 28h20M22 38h20M22 48h12"/>
+</svg>
+{% elif icon == 'box' %}
+<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ class_name|default:'w-6 h-6' }}" aria-hidden="true">
+    <path d="M32 6l22 12v28L32 58 10 46V18L32 6z"/>
+    <path d="M10 18l22 12 22-12"/>
+    <path d="M32 30v28"/>
+</svg>
 {% endif %}

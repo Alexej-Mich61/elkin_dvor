@@ -7,9 +7,11 @@
 Стадия: выполнены этапы 0 (основа), 1 (модели каталога и админка),
 2 (публичная главная, страницы категорий/товаров, SEO-основа),
 3 (сессионная корзина), 4 (промокоды и единый расчёт),
-5 (покупатели, оформление заказа, подтверждение, админка заказов) и
-6 (почтовая очередь в БД, команда `send_order_emails`, логи отправки).
-Следующий — этап 7 (работа менеджеров и администраторов).
+5 (покупатели, оформление заказа, подтверждение, админка заказов),
+6 (почтовая очередь в БД, команда `send_order_emails`, логи отправки) и
+7 (работа менеджеров: staff-страницы «Заказы» и «Клиентская база», права
+группы «Менеджер», Excel-экспорт, вход сотрудников).
+Следующий — этап 8 (итоговая проверка, эксплуатация и публикация).
 
 ## Документация
 - [ROADMAP.md](ROADMAP.md) — порядок этапов, задачи, критерии готовности и текущие отметки выполнения.
@@ -21,7 +23,8 @@
 
 ## Стек
 Python 3.14 · Django 6.1.2 · SQLite · django-tailwind 4.6 (Tailwind CSS 4 + daisyUI 5) ·
-python-dotenv · Pillow (обязателен для `ImageField`) · Alpine.js и HTMX (CDN, подключены в `templates/base.html`).
+python-dotenv · Pillow (обязателен для `ImageField`) · openpyxl 3.1 (Excel-экспорт,
+этап 7) · Alpine.js и HTMX (CDN, подключены в `templates/base.html`).
 django-browser-reload — только при `DEBUG=True`.
 
 ## Команды (Windows, venv в ./venv)
@@ -41,6 +44,11 @@ venv/Scripts/python.exe manage.py migrate
 
 # тесты
 venv/Scripts/python.exe manage.py test                  # тесты shop, cart и orders
+
+# права менеджера (этап 7): создание/синхронизация группы «Менеджер».
+# Идемпотентна; запускать после migrate и при изменении состава прав.
+# Флаг is_staff на самом пользователе включается вручную (в админке).
+venv/Scripts/python.exe manage.py ensure_manager_group
 
 # почтовая очередь (этап 6): однократная отправка готовых писем
 venv/Scripts/python.exe manage.py send_order_emails     # до 20 писем; --batch N
@@ -104,14 +112,25 @@ venv/Scripts/python.exe manage.py check
   - `management/commands/send_order_emails.py` — отправка партии готовых
     писем (`--batch`, по умолчанию 20); запуск — `send_emails.bat` или
     планировщик ОС;
+  - staff-страницы менеджера (этап 7) — `/orders/staff/orders/` и
+    `/orders/staff/customers/`: списки с фильтрами/поиском/статистикой/
+    пагинацией 50, модальные окна просмотра/редактирования/удаления, смена
+    статуса прямо в списке, Excel-экспорт (openpyxl). Логика фильтров —
+    `staff_services.py`, сборка .xlsx — `exports.py`, тонкие views —
+    `staff_views.py`, шаблоны — `templates/orders/staff/`;
+    права: авторизован + `is_staff` + разрешение модели (`orders.view_order`
+    и т.д.); группа «Менеджер» — команда `ensure_manager_group`;
   - `forms.py` (`CheckoutForm` — имя/телефон/адрес обязательны, email и
-    примечание необязательны, телефон: 10–15 цифр после нормализации),
+    примечание необязательны, телефон: 10–15 цифр после нормализации;
+    `OrderFilterForm` и `OrderEditForm` — staff-фильтр и правка контактного
+    снимка/статуса, деньги и позиции не редактируются),
     `views.py` (`checkout` — одноразовый токен в сессии против повторного
     submit, корзина чистится после commit; `order_confirmation` — доступ
     только к последнему заказу текущей сессии, URL без ID), `urls.py`,
     `admin.py` (заказы: фильтры по статусу и дате, поиск по номеру/имени/
     телефону/email/адресу, позиции инлайном readonly, снимок readonly,
-    статус редактируется; покупатели: поиск, число заказов), `tests.py`.
+    статус редактируется, действие «Экспорт в Excel»; покупатели: поиск,
+    число заказов, действие «Экспорт в Excel»), `tests.py`.
 - `theme/` — Tailwind-приложение (django-tailwind):
   - `static_src/` — источники: `src/styles.css`, `package.json`; там же `node_modules`;
   - `static/css/dist/styles.css` — собранный CSS (генерируется, вручную не править).
@@ -124,7 +143,16 @@ venv/Scripts/python.exe manage.py check
     с номером, составом, итогами, кнопкой «Скачать» (JSON заказа для canvas);
   - `orders/emails/` — шаблоны писем очереди (этап 6): текст + HTML + subject
     для покупателя (`order_customer*`) и менеджера (`order_manager*`);
-  - `includes/` — повторяющиеся фрагменты (`header.html`, `footer.html`, `icon.html` — контурные SVG-иконки, `mobile_contacts_bar.html` — плавающая панель связи на мобильных);
+  - `orders/staff/` — staff-страницы менеджера (этап 7): `orders_list.html`
+    (фильтры, статистика, таблица, модальные окна просмотра/редактирования/
+    удаления), `customers_list.html`, `partials/` (HTMX-контент модалок
+    `order_detail.html`, `order_form.html`);
+  - `registration/login.html` — страница входа сотрудников (этап 7,
+    стандартный `LoginView`; публичной регистрации и сброса пароля нет);
+  - `includes/` — повторяющиеся фрагменты (`header.html` — шапка с иконками
+    входа/меню/админки/выхода и боковым меню справа (Alpine), `footer.html`,
+    `icon.html` — контурные SVG-иконки, `mobile_contacts_bar.html` — плавающая
+    панель связи на мобильных);
   - `partials/` — HTMX-фрагменты и карточка товара (`product_card.html`, `variant_price.html`);
   - `robots.txt` — отдаётся через TemplateView с `text/plain`.
 - `static/` — глобальная статика:
@@ -160,6 +188,16 @@ venv/Scripts/python.exe manage.py check
 - `/cart/promo/remove/` — удаление промокода из корзины (POST), name=`cart:promo_remove`.
 - `/orders/checkout/` — оформление заказа (GET — форма, POST — создание), name=`orders:checkout`.
 - `/orders/success/` — подтверждение последнего заказа текущей сессии (URL без ID), name=`orders:confirmation`.
+- `/orders/staff/orders/` — список заказов менеджера, name=`orders:staff_orders` (только staff с `orders.view_order`).
+- `/orders/staff/orders/export/` — Excel видимого набора, name=`orders:staff_orders_export`.
+- `/orders/staff/orders/<pk>/` — HTMX-фрагмент просмотра заказа, name=`orders:staff_order_detail`.
+- `/orders/staff/orders/<pk>/export/` — Excel одного заказа, name=`orders:staff_order_export`.
+- `/orders/staff/orders/<pk>/edit/` — модальное редактирование (GET/POST), name=`orders:staff_order_edit`.
+- `/orders/staff/orders/<pk>/delete/` — удаление (POST), name=`orders:staff_order_delete`.
+- `/orders/staff/orders/<pk>/status/` — смена статуса из списка (POST), name=`orders:staff_order_status`.
+- `/orders/staff/customers/` — клиентская база, name=`orders:staff_customers` (только staff с `orders.view_customer`).
+- `/orders/staff/customers/export/` и `/orders/staff/customers/export/all/` — Excel найденных / всей базы, names=`orders:staff_customers_export`, `orders:staff_customers_export_all`.
+- `/accounts/login/`, `/accounts/logout/` — вход/выход сотрудников (стандартные auth views; logout — POST-формой), names=`login`, `logout`.
 - `/sitemap.xml`, `/robots.txt` — SEO (django.contrib.sitemaps; домен сайта задаётся в админке Sites).
 - `/admin/` — стандартная админка Django.
 - `__reload__/` и раздача `/media/` — подключаются только при `DEBUG=True`.
@@ -217,8 +255,16 @@ venv/Scripts/python.exe manage.py check
 - Кнопки «−»/«+» в корзине — submit-кнопки с `name="quantity"` и value=новое
   количество: работают и без JavaScript, и с HTMX (htmx шлёт value нажатой кнопки).
 - Разделение ответственности: HTMX — серверные действия (размер/цена, корзина, счётчик,
-  промокод, checkout); Alpine.js — только локальное UI-состояние (мобильное меню, модалки,
-  галерея). Alpine не дублирует состояние корзины и цен. Подробности — `docs/architecture.md` §11.
+  промокод, checkout, staff-мутации); Alpine.js — только локальное UI-состояние (мобильное
+  меню, модалки, боковая панель меню, галерея). Alpine не дублирует состояние корзины и цен.
+  Подробности — `docs/architecture.md` §11.
+- Staff-страницы (этап 7): фильтры/поиск/статистика/пагинация — в `orders/staff_services.py`,
+  Excel — в `orders/exports.py`, views — тонкие (`orders/staff_views.py`). Поиск по тексту —
+  в Python (`str.casefold()`): SQLite LIKE сворачивает регистр только ASCII. Потолок
+  «последних 100 без фильтров» снимается любым фильтром/поиском. Успешные HTMX-мутации
+  staff-страниц возвращают 204 + `HX-Trigger: staff:reload` — страница перезагружает
+  список, чтобы фильтры/статистика/строки остались актуальными; CSRF HTMX-запросов вне
+  форм обеспечивает `hx-headers` в `base.html`.
 - Стиль именования — стандартный Django: `snake_case` для файлов/полей, `PascalCase` для классов.
 - После правок моделей: `makemigrations` → `migrate`. Пустые миграции не коммитить без нужды.
 - Новые URL приложений — подключать через `include()` в `config/urls.py`.
@@ -266,6 +312,9 @@ venv/Scripts/python.exe manage.py check
   backend может упасть с `[Errno 22] Invalid argument` при выводе кириллицы
   в чужую консоль/лог планировщика — письмо тогда уйдёт в повтор, а не в sent.
   Своими запусками `manage.py send_order_emails` учитывай то же самое.
+- В Django 6.1 шаблонный комментарий `{# ... #}` НЕ пересекает переводы строк
+  (многострочный выводится как текст) — многострочные комментарии только через
+  `{% comment %}`.
 
 ## Завершение итерации
 - Запустить `manage.py check` и относящиеся к изменениям тесты.

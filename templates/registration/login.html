@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Вход для сотрудников — {{ SHOP_NAME }}{% endblock %}
+{% block robots_meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto flex max-w-md flex-col items-center px-4 py-12 sm:py-16">
+        <img src="{% static 'img/logo_elkin_dvor.png' %}" alt="Ёлкин двор" class="h-14 w-auto">
+        <h1 class="mt-6 text-2xl font-black sm:text-3xl">Вход для сотрудников</h1>
+        <p class="mt-2 text-center text-sm font-semibold text-base-content/60">
+            Раздел предназначен для менеджеров и администраторов магазина.
+        </p>
+
+        <form method="post" action="{% url 'login' %}" novalidate
+              class="mt-8 w-full rounded-2xl border border-base-300 bg-white px-6 py-6">
+            {% csrf_token %}
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            {% if form.non_field_errors %}
+                <div class="mb-4 rounded-xl bg-error/10 px-4 py-3 text-sm font-semibold text-error">
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="grid gap-5">
+                <div>
+                    <label for="id_username" class="mb-1 block text-sm font-bold">Логин</label>
+                    <input type="text" id="id_username" name="username" required autofocus
+                           value="{{ form.username.value|default:'' }}"
+                           autocomplete="username"
+                           aria-invalid="{% if form.username.errors %}true{% else %}false{% endif %}"
+                           class="input input-bordered w-full{% if form.username.errors %} input-error{% endif %}">
+                    {% if form.username.errors %}
+                        <p class="mt-1 text-sm font-semibold text-error">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="id_password" class="mb-1 block text-sm font-bold">Пароль</label>
+                    <input type="password" id="id_password" name="password" required
+                           autocomplete="current-password"
+                           aria-invalid="{% if form.password.errors %}true{% else %}false{% endif %}"
+                           class="input input-bordered w-full{% if form.password.errors %} input-error{% endif %}">
+                    {% if form.password.errors %}
+                        <p class="mt-1 text-sm font-semibold text-error">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-6 w-full rounded-full text-base">
+                Войти
+            </button>
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% load shop_extras %}
+{# Контент модального окна «Просмотр заказа» (HTMX-фрагмент). Только чтение. #}
+
+<h3 class="text-lg font-black">Заказ {{ order.number }}</h3>
+<p class="mt-1 text-sm font-semibold text-base-content/60">
+    {{ order.created_at|date:'d.m.Y H:i' }}
+    <span class="mx-1">·</span>
+    <span class="badge badge-sm
+        {% if order.status == 'completed' %}badge-success{% elif order.status == 'cancelled' %}badge-error{% else %}badge-warning{% endif %}">
+        {{ order.get_status_display }}
+    </span>
+</p>
+
+<div class="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+    <div>
+        <p class="text-xs font-bold uppercase text-base-content/50">Покупатель</p>
+        <p class="mt-0.5 font-bold">{{ order.name }}</p>
+        <p>{{ order.phone }}</p>
+        {% if order.email %}<p>{{ order.email }}</p>{% endif %}
+    </div>
+    <div>
+        <p class="text-xs font-bold uppercase text-base-content/50">Адрес доставки</p>
+        <p class="mt-0.5 font-semibold">{{ order.address }}</p>
+    </div>
+    {% if order.note %}
+        <div class="sm:col-span-2">
+            <p class="text-xs font-bold uppercase text-base-content/50">Примечание</p>
+            <p class="mt-0.5 font-semibold">{{ order.note }}</p>
+        </div>
+    {% endif %}
+</div>
+
+<table class="table table-sm mt-5">
+    <thead>
+        <tr class="text-xs uppercase text-base-content/50">
+            <th>Товар</th>
+            <th>Размер</th>
+            <th class="text-right">Цена</th>
+            <th class="text-right">Кол-во</th>
+            <th class="text-right">Сумма</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in order.items.all %}
+            <tr class="text-sm">
+                <td>{{ item.product_name }}</td>
+                <td>{{ item.variant_size }}</td>
+                <td class="text-right">{{ item.unit_price|price }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-right font-bold">{{ item.total_price|price }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="mt-3 space-y-1 text-sm">
+    <p class="flex justify-between font-semibold text-base-content/60">
+        <span>Подытог</span><span>{{ order.subtotal|price }}</span>
+    </p>
+    {% if order.discount > 0 %}
+        <p class="flex justify-between font-semibold text-success">
+            <span>Скидка{% if order.promo_code %} по промокоду {{ order.promo_code }}{% endif %}</span>
+            <span>−{{ order.discount|price }}</span>
+        </p>
+    {% endif %}
+    <p class="flex items-baseline justify-between border-t border-base-300 pt-2 text-lg">
+        <span class="font-bold">Итого</span>
+        <span class="font-black">{{ order.total|price }}</span>
+    </p>
+</div>
+
+<div class="modal-action">
+    <a href="{% url 'orders:staff_order_export' order.pk %}" class="btn btn-outline btn-sm rounded-full">
+        {% include 'includes/icon.html' with icon='download' class_name='w-4 h-4' %}
+        Экспорт в Excel
+    </a>
+    <button type="button" @click="viewOpen = false" class="btn btn-sm rounded-full">Закрыть</button>
+</div>

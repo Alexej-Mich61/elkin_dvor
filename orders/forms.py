@@ -7,10 +7,13 @@
 """
 from django import forms
 
+from shop.models import Category
+
 from .models import (
     ADDRESS_MAX_LENGTH,
     CONTACT_NAME_MAX_LENGTH,
     PHONE_MAX_LENGTH,
+    Order,
     normalize_phone,
 )
 
@@ -82,3 +85,81 @@ class CheckoutForm(forms.Form):
         # Пустой email — нормально (необязательное поле), нормализуем непустой.
         email = self.cleaned_data["email"].strip().lower()
         return email
+
+
+# --- Staff-страницы менеджера (этап 7) ----------------------------------------
+
+PROMO_FILTER_CHOICES = (
+    ("", "Все заказы"),
+    ("yes", "С промокодом"),
+    ("no", "Без промокода"),
+)
+
+
+class OrderFilterForm(forms.Form):
+    """Фильтр списка заказов на staff-странице. Параметры — только чтение,
+    данные заказов не меняет; разбор очищенных значений — staff_services."""
+
+    date_from = forms.DateField(
+        label="Дата с",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    date_to = forms.DateField(
+        label="Дата по",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    status = forms.ChoiceField(
+        label="Статус",
+        required=False,
+        choices=[("", "Все статусы")] + list(Order.STATUS_CHOICES),
+    )
+    category = forms.ModelChoiceField(
+        label="Категория товара",
+        required=False,
+        queryset=Category.objects.none(),  # заполняем в __init__ (см. ниже)
+        empty_label="Все категории",
+    )
+    promo = forms.ChoiceField(
+        label="Промокод",
+        required=False,
+        choices=PROMO_FILTER_CHOICES,
+    )
+    search = forms.CharField(label="Поиск", required=False, max_length=100)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = Category.objects.order_by(
+            "sort_order", "name"
+        )
+
+
+class OrderEditForm(forms.ModelForm):
+    """Редактирование заказа менеджером (модальное окно на staff-странице).
+
+    Доступны контактный снимок и статус — их правка — служебная
+    необходимость (опечатки в адресе/телефоне, ручной перевод статуса).
+    Деньги и позиции — исторический снимок: не редактируются никогда
+    (см. docs/architecture.md §6), в форме показываются только для чтения.
+    """
+
+    class Meta:
+        model = Order
+        fields = ["name", "phone", "email", "address", "note", "status"]
+        widgets = {"note": forms.Textarea(attrs={"rows": 3})}
+
+    def clean_phone(self):
+        phone = self.cleaned_data["phone"].strip()
+        digits = normalize_phone(phone)
+        if not (PHONE_MIN_DIGITS <= len(digits) <= PHONE_MAX_DIGITS):
+            raise forms.ValidationError(
+                "Похоже, в номере ошибка: нужно от 10 до 15 цифр. "
+                "Проверьте, пожалуйста."
+            )
+        return phone
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()

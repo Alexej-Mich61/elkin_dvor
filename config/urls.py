@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 from django.views.generic import TemplateView
@@ -14,6 +15,10 @@ sitemaps = {
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Вход/выход сотрудников (этап 7). Только login/logout: публичной
+    # регистрации и самостоятельного сброса пароля в MVP нет.
+    path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
+    path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
     # Главная и публичный каталог магазина
     path("", include("shop.urls")),
     # Сессионная корзина

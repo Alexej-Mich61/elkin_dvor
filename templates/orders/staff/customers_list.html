@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load shop_extras %}
+
+{% block title %}Клиентская база — {{ SHOP_NAME }}{% endblock %}
+{% block robots_meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-black sm:text-4xl">Клиентская база</h1>
+
+        <!-- Поиск: обычный GET — работает без JavaScript. -->
+        <form method="get" class="mt-6 flex flex-wrap items-end gap-3">
+            <div class="w-full sm:w-96">
+                <label for="customer-search" class="mb-1 block text-xs font-bold text-base-content/60">Поиск</label>
+                <input type="text" id="customer-search" name="q" value="{{ search }}"
+                       placeholder="Имя, телефон, email, адрес"
+                       class="input input-bordered input-sm w-full">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm rounded-full px-6">Применить</button>
+            <a href="{% url 'orders:staff_customers' %}" class="btn btn-outline btn-sm rounded-full">Сбросить</a>
+        </form>
+
+        <!-- Статистика + экспорт: отфильтрованный список и вся база. -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm font-bold">
+                Найдено покупателей: {{ stats.shown }}
+                <span class="mx-1 text-base-content/40">·</span>
+                Заказов у найденных: {{ stats.orders_count }}
+                <span class="mx-1 text-base-content/40">·</span>
+                На сумму: {{ stats.total_sum|price }}
+            </p>
+            <div class="flex gap-2">
+                <a href="{{ export_url }}" class="btn btn-outline btn-sm rounded-full">
+                    {% include 'includes/icon.html' with icon='download' class_name='w-4 h-4' %}
+                    Экспорт в Excel
+                </a>
+                <a href="{{ export_all_url }}" class="btn btn-outline btn-sm rounded-full">
+                    {% include 'includes/icon.html' with icon='download' class_name='w-4 h-4' %}
+                    Экспорт всей базы
+                </a>
+            </div>
+        </div>
+
+        <!-- Предупреждение о лимите — только пока действует ограничение 100. -->
+        {% if stats.limited %}
+            <div class="mt-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm font-semibold text-warning">
+                Показаны последние 100 покупателей из {{ stats.total_found }}.
+                Примените поиск, чтобы увидеть всех.
+            </div>
+        {% endif %}
+
+        <!-- Список покупателей: контакты и адреса из заказов. -->
+        <div class="mt-4 overflow-x-auto rounded-2xl border border-base-300 bg-white">
+            <table class="table table-sm min-w-[1000px]">
+                <thead>
+                    <tr class="text-xs uppercase text-base-content/50">
+                        <th>Имя</th>
+                        <th>Контакты</th>
+                        <th>Адреса доставки</th>
+                        <th class="text-right">Заказов</th>
+                        <th class="text-right">Сумма заказов</th>
+                        <th>Последний заказ</th>
+                        <th>В базе с</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in page.items %}
+                        <tr class="align-top text-sm hover:bg-base-200/50">
+                            <td class="font-bold">{{ row.customer.name }}</td>
+                            <td>
+                                <div>{{ row.customer.phone }}</div>
+                                {% if row.customer.email %}
+                                    <div class="text-xs text-base-content/60">{{ row.customer.email }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="max-w-[320px] text-xs">
+                                {% for address in row.addresses|slice:':2' %}
+                                    {{ address }}{% if not forloop.last %};<br>{% endif %}
+                                {% empty %}
+                                    <span class="text-base-content/40">—</span>
+                                {% endfor %}
+                                {% if row.addresses|length > 2 %}
+                                    <br><span class="text-base-content/50">+ ещё {{ row.addresses|length|add:'-2' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">{{ row.orders_count }}</td>
+                            <td class="whitespace-nowrap text-right font-bold">{{ row.total_spent|price }}</td>
+                            <td class="whitespace-nowrap text-base-content/70">
+                                {{ row.last_order_at|date:'d.m.Y H:i'|default:'—' }}
+                            </td>
+                            <td class="whitespace-nowrap text-base-content/70">
+                                {{ row.customer.created_at|date:'d.m.Y' }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="py-10 text-center font-semibold text-base-content/50">
+                                Покупатели не найдены. Измените поиск или сбросьте его.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Пагинация: ссылки сохраняют текущий поиск. -->
+        {% if page.num_pages > 1 %}
+            <div class="mt-4 flex items-center justify-center gap-2">
+                {% if page.has_previous %}
+                    <a href="?{% if query %}{{ query }}&{% endif %}page={{ page.previous_page_number }}"
+                       class="btn btn-outline btn-sm rounded-full">← Назад</a>
+                {% endif %}
+                <span class="px-2 text-sm font-bold">Страница {{ page.number }} из {{ page.num_pages }}</span>
+                {% if page.has_next %}
+                    <a href="?{% if query %}{{ query }}&{% endif %}page={{ page.next_page_number }}"
+                       class="btn btn-outline btn-sm rounded-full">Вперёд →</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

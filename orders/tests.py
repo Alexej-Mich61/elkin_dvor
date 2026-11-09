@@ -3,27 +3,31 @@
 Покрываем: нормализацию и формат кода, границы периода действия и
 минимальной суммы, округление скидки и неотрицательный итог.
 """
+import io
 import smtplib
 from datetime import timedelta
 from decimal import Decimal
 from unittest import mock
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from openpyxl import load_workbook
 
 from shop.models import Category, Product, ProductVariant
 
+from . import exports, staff_services
 from .emails import MAX_ATTEMPTS, queue_order_emails
-from .forms import CheckoutForm
+from .forms import CheckoutForm, OrderEditForm, OrderFilterForm
 from .models import (
     Customer,
     Order,
+    OrderItem,
     OutgoingEmail,
     PromoCode,
     ShopSettings,
@@ -958,3 +962,671 @@ class CertifiSmtpBackendTests(TestCase):
         ):
             connection = mailers.create_connection("default")
         self.assertIsNotNone(connection.ssl_context)
+
+
+# --- Этап 7: staff-страницы менеджера и администратора -------------------------
+
+
+def make_staff_user(username, *, manager=False, superuser=False):
+    """Тестовый сотрудник. manager=True — в группу «Менеджер»."""
+    user = User.objects.create_user(username=username, password="pass", is_staff=True)
+    if manager:
+        call_command("ensure_manager_group")
+        user.groups.add(Group.objects.get(name="Менеджер"))
+    if superuser:
+        user.is_superuser = True
+        user.save()
+    return user
+
+
+def bulk_orders(count, *, base_minutes=0, **kwargs):
+    """Набор заказов напрямую в БД (быстро): от самых новых к старым."""
+    defaults = dict(
+        name="Покупатель",
+        phone="+7 (900) 000-00-00",
+        address="ул. Тестовая, 1",
+        subtotal=Decimal("100.00"),
+        discount=Decimal("0.00"),
+        total=Decimal("100.00"),
+    )
+    defaults.update(kwargs)
+    now = timezone.now() - timedelta(minutes=base_minutes)
+    orders = [
+        Order(
+            number=f"ЁД-2026-{100000 + i:06d}",
+            created_at=now - timedelta(minutes=i),
+            **defaults,
+        )
+        for i in range(count)
+    ]
+    Order.objects.bulk_create(orders)
+    return orders
+
+
+class EnsureManagerGroupCommandTests(TestCase):
+    """Группа «Менеджер»: состав прав и идемпотентность команды."""
+
+    def test_group_created_with_expected_permissions(self):
+        call_command("ensure_manager_group")
+        group = Group.objects.get(name="Менеджер")
+        codenames = set(group.permissions.values_list("codename", flat=True))
+        self.assertIn("view_order", codenames)
+        self.assertIn("change_order", codenames)
+        self.assertIn("view_customer", codenames)
+        self.assertIn("view_promocode", codenames)
+
+    def test_no_dangerous_permissions(self):
+        call_command("ensure_manager_group")
+        group = Group.objects.get(name="Менеджер")
+        codenames = set(group.permissions.values_list("codename", flat=True))
+        # Удаление заказов, критичные настройки и пользователи — только админу.
+        for forbidden in (
+            "delete_order",
+            "add_order",
+            "delete_customer",
+            "view_shopsettings",
+            "change_shopsettings",
+            "view_outgoingemail",
+            "add_user",
+            "change_user",
+            "delete_user",
+        ):
+            self.assertNotIn(forbidden, codenames)
+
+    def test_command_is_idempotent(self):
+        call_command("ensure_manager_group")
+        first = list(
+            Group.objects.get(name="Менеджер")
+            .permissions.values_list("pk", flat=True)
+        )
+        call_command("ensure_manager_group")
+        second = list(
+            Group.objects.get(name="Менеджер")
+            .permissions.values_list("pk", flat=True)
+        )
+        self.assertEqual(sorted(first), sorted(second))
+
+    def test_manager_can_view_and_change_orders(self):
+        user = make_staff_user("manager", manager=True)
+        self.assertTrue(user.has_perm("orders.view_order"))
+        self.assertTrue(user.has_perm("orders.change_order"))
+        self.assertFalse(user.has_perm("orders.delete_order"))
+        self.assertFalse(user.has_perm("orders.view_shopsettings"))
+
+
+class StaffAccessTests(TestCase):
+    """Доступ к staff-страницам: аноним, обычный пользователь, менеджер, админ."""
+
+    @classmethod
+    def setUpTestData(cls):
+        setup_catalog(cls)
+        cls.order = create_order(
+            lines=[(cls.variant.pk, 1)], promo_code=None, **CONTACT
+        )
+        cls.manager = make_staff_user("manager", manager=True)
+        cls.admin = make_staff_user("admin7", superuser=True)
+        cls.regular = User.objects.create_user(username="regular", password="pass")
+
+    def test_anonymous_redirected_to_login(self):
+        for url in ("orders:staff_orders", "orders:staff_customers"):
+            with self.subTest(url=url):
+                response = self.client.get(reverse(url))
+                self.assertEqual(response.status_code, 302)
+                self.assertIn(reverse("login"), response.url)
+
+    def test_login_page_available(self):
+        response = self.client.get(reverse("login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Вход для сотрудников")
+
+    def test_regular_user_forbidden(self):
+        self.client.force_login(self.regular)
+        for url in ("orders:staff_orders", "orders:staff_customers"):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(reverse(url)).status_code, 403)
+
+    def test_staff_without_permissions_forbidden(self):
+        staff_no_perms = User.objects.create_user(
+            username="helper", password="pass", is_staff=True
+        )
+        self.client.force_login(staff_no_perms)
+        self.assertEqual(
+            self.client.get(reverse("orders:staff_orders")).status_code, 403
+        )
+
+    def test_manager_has_access(self):
+        self.client.force_login(self.manager)
+        for url in ("orders:staff_orders", "orders:staff_customers"):
+            with self.subTest(url=url):
+                response = self.client.get(reverse(url))
+                self.assertEqual(response.status_code, 200)
+
+    def test_admin_has_access(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(
+            self.client.get(reverse("orders:staff_orders")).status_code, 200
+        )
+
+    def test_manager_admin_access_limited(self):
+        """Менеджер заходит в админку, но не в пользователей и настройки."""
+        self.client.force_login(self.manager)
+        self.assertEqual(
+            self.client.get(reverse("admin:index")).status_code, 200
+        )
+        self.assertEqual(
+            self.client.get(reverse("admin:orders_order_changelist")).status_code,
+            200,
+        )
+        # Управление пользователями — только администратору.
+        self.assertEqual(
+            self.client.get(reverse("admin:auth_user_changelist")).status_code,
+            403,
+        )
+        # Критичные настройки магазина — только администратору.
+        self.assertEqual(
+            self.client.get(reverse("admin:orders_shopsettings_changelist")).status_code,
+            403,
+        )
+
+    def test_manager_cannot_delete_order(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("orders:staff_order_delete", args=[self.order.pk])
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Order.objects.filter(pk=self.order.pk).exists())
+
+
+class StaffOrderFilterTests(TestCase):
+    """Сервис фильтров заказов: статус, дата, категория, промокод, поиск."""
+
+    @classmethod
+    def setUpTestData(cls):
+        setup_catalog(cls)
+        cls.category2 = Category.objects.create(name="Подставки")
+        cls.product2 = Product.objects.create(
+            category=cls.category2, name="Подставка кованая"
+        )
+        cls.variant2 = ProductVariant.objects.create(
+            product=cls.product2, size="—", price=Decimal("900.00")
+        )
+        cls.promo = make_promo(code="ЁЛКА10")
+        cls.order_promo = create_order(
+            lines=[(cls.variant.pk, 1)], promo_code=cls.promo.code, **CONTACT
+        )
+        cls.order_plain = create_order(
+            lines=[(cls.variant2.pk, 1)],
+            promo_code=None,
+            name="Ольга",
+            phone="+7 (928) 555-13-13",
+            email="",
+            address="пр. Михаила Нагибина, 5",
+            note="",
+        )
+
+    def test_newest_first(self):
+        orders, _ = staff_services.filter_orders(staff_services.OrderFilters())
+        self.assertGreaterEqual(
+            orders[0].created_at, orders[-1].created_at
+        )
+
+    def test_filter_by_status(self):
+        self.order_plain.status = Order.STATUS_COMPLETED
+        self.order_plain.save(update_fields=["status"])
+        orders, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(status=Order.STATUS_COMPLETED)
+        )
+        self.assertEqual([o.pk for o in orders], [self.order_plain.pk])
+
+    def test_filter_by_date_range(self):
+        today = timezone.localdate()
+        orders, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(date_from=today, date_to=today)
+        )
+        self.assertEqual(len(orders), 2)
+        orders, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(date_to=today - timedelta(days=1))
+        )
+        self.assertEqual(orders, [])
+
+    def test_filter_by_category_matches_any_position(self):
+        # Заказ с товарами двух категорий виден при фильтре по любой из них.
+        combo = create_order(
+            lines=[(self.variant.pk, 1), (self.variant2.pk, 1)],
+            promo_code=None,
+            name="Дуэт",
+            phone="+7 (900) 000-00-01",
+            email="",
+            address="ул. Комбо, 1",
+            note="",
+        )
+        by_first, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(category_id=self.category.pk)
+        )
+        by_second, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(category_id=self.category2.pk)
+        )
+        self.assertIn(combo.pk, [o.pk for o in by_first])
+        self.assertIn(combo.pk, [o.pk for o in by_second])
+        self.assertNotIn(self.order_promo.pk, [o.pk for o in by_second])
+
+    def test_filter_by_promo_presence(self):
+        with_promo, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(promo="yes")
+        )
+        without_promo, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(promo="no")
+        )
+        self.assertEqual([o.pk for o in with_promo], [self.order_promo.pk])
+        self.assertNotIn(self.order_promo.pk, [o.pk for o in without_promo])
+
+    def test_search_is_case_insensitive_cyrillic(self):
+        # SQLite LIKE сворачивает регистр только ASCII: проверяем кириллицу.
+        for needle in ("мАрИя", "мария", "МАРИЯ"):
+            with self.subTest(needle=needle):
+                orders, _ = staff_services.filter_orders(
+                    staff_services.OrderFilters(search=needle)
+                )
+                self.assertIn(self.order_promo.pk, [o.pk for o in orders])
+
+    def test_search_by_product_and_promo_and_address(self):
+        by_product, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(search="сосна")
+        )
+        self.assertIn(self.order_promo.pk, [o.pk for o in by_product])
+        by_promo, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(search="ёлка10")
+        )
+        self.assertEqual([o.pk for o in by_promo], [self.order_promo.pk])
+        by_address, _ = staff_services.filter_orders(
+            staff_services.OrderFilters(search="нАгибинА")
+        )
+        self.assertEqual([o.pk for o in by_address], [self.order_plain.pk])
+
+    def test_default_limit_and_lifting(self):
+        bulk_orders(105, name="Массовый")
+        filters = staff_services.OrderFilters()
+        orders, total = staff_services.filter_orders(filters)
+        self.assertEqual(len(orders), staff_services.DEFAULT_LIMIT)
+        self.assertEqual(total, 107)
+        stats = staff_services.summarize_orders(orders, total, filters)
+        self.assertTrue(stats.limited)
+
+        # Любой фильтр/поиск снимает ограничение: видны все подходящие.
+        lifted, total_lifted = staff_services.filter_orders(
+            staff_services.OrderFilters(search="массовый")
+        )
+        self.assertEqual(len(lifted), 105)
+        self.assertEqual(total_lifted, 105)
+        stats = staff_services.summarize_orders(
+            lifted, total_lifted, staff_services.OrderFilters(search="массовый")
+        )
+        self.assertFalse(stats.limited)
+
+    def test_stats_sums_visible_orders(self):
+        orders, total = staff_services.filter_orders(staff_services.OrderFilters())
+        stats = staff_services.summarize_orders(
+            orders, total, staff_services.OrderFilters()
+        )
+        expected = self.order_promo.total + self.order_plain.total
+        self.assertEqual(stats.shown, 2)
+        self.assertEqual(stats.total_sum, expected)
+
+    def test_paginate(self):
+        items = list(range(1, 121))
+        page = staff_services.paginate(items, "2", 50)
+        self.assertEqual(page.number, 2)
+        self.assertEqual(page.num_pages, 3)
+        self.assertEqual(len(page.items), 50)
+        self.assertTrue(page.has_previous)
+        self.assertTrue(page.has_next)
+        # Некорректные номера страниц не падают.
+        self.assertEqual(staff_services.paginate(items, "abc", 50).number, 1)
+        self.assertEqual(staff_services.paginate(items, "99", 50).number, 3)
+
+
+class StaffOrdersViewTests(TestCase):
+    """Staff-страница заказов: список, статус, редактирование, удаление, экспорт."""
+
+    @classmethod
+    def setUpTestData(cls):
+        setup_catalog(cls)
+        cls.order = create_order(
+            lines=[(cls.variant.pk, 2)],
+            promo_code=None,
+            **{**CONTACT, "email": "maria@example.com"},
+        )
+        cls.manager = make_staff_user("manager", manager=True)
+        cls.admin = make_staff_user("admin7", superuser=True)
+
+    def test_list_renders_order_and_stats(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_orders"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.order.number)
+        self.assertContains(response, "Мария")
+        self.assertContains(response, "Сосна крымская")
+        self.assertContains(response, "Найдено заказов: 1")
+        self.assertContains(response, "7 800 руб.")
+        # Кнопки, доступные администратору: просмотр, редактирование, удаление.
+        self.assertContains(response, "Экспорт в Excel")
+
+    def test_pagination_50_per_page(self):
+        bulk_orders(60, name="Массовый")
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_orders"))
+        self.assertContains(response, "Страница 1 из 2")
+        response = self.client.get(reverse("orders:staff_orders"), {"page": 2})
+        self.assertEqual(response.status_code, 200)
+
+    def test_limit_warning_shown_and_hidden(self):
+        bulk_orders(105)
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_orders"))
+        self.assertContains(response, "Показаны последние 100 заказов")
+        # Предупреждение исчезает, когда лимит снят поиском.
+        response = self.client.get(
+            reverse("orders:staff_orders"), {"search": "массовый"}
+        )
+        self.assertNotContains(response, "Показаны последние 100")
+
+    def test_export_url_keeps_filters(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(
+            reverse("orders:staff_orders"), {"status": "processing"}
+        )
+        self.assertContains(response, "status=processing")
+
+    def test_status_change_from_list(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("orders:staff_order_status", args=[self.order.pk]),
+            {"status": Order.STATUS_COMPLETED},
+        )
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response["HX-Trigger"], "staff:reload")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_COMPLETED)
+
+    def test_status_change_rejects_unknown_value(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("orders:staff_order_status", args=[self.order.pk]),
+            {"status": "hacked"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_PROCESSING)
+
+    def test_edit_get_returns_form_partial(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(
+            reverse("orders:staff_order_edit", args=[self.order.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Редактирование заказа")
+        self.assertContains(response, "Мария")
+
+    def test_edit_post_updates_contacts_and_status(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("orders:staff_order_edit", args=[self.order.pk]),
+            {
+                "name": "Мария Иванова",
+                "phone": "+7 (918) 123-45-67",
+                "email": "",
+                "address": "ул. Таганрогская, 140/4, кв. 13",
+                "note": "Позвонить за час",
+                "status": Order.STATUS_COMPLETED,
+            },
+        )
+        self.assertEqual(response.status_code, 204)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.name, "Мария Иванова")
+        self.assertEqual(self.order.address, "ул. Таганрогская, 140/4, кв. 13")
+        self.assertEqual(self.order.status, Order.STATUS_COMPLETED)
+
+    def test_edit_post_keeps_money_snapshot_immutable(self):
+        """Деньги и позиции — исторический снимок: подсунуть их в POST нельзя."""
+        self.client.force_login(self.manager)
+        self.client.post(
+            reverse("orders:staff_order_edit", args=[self.order.pk]),
+            {
+                "name": "Мария",
+                "phone": "+7 (918) 123-45-67",
+                "email": "",
+                "address": "ул. Таганрогская, 140/4, кв. 12",
+                "note": "",
+                "status": "processing",
+                "total": "1.00",
+                "subtotal": "1.00",
+            },
+        )
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.total, Decimal("7800.00"))
+
+    def test_edit_post_invalid_returns_422(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("orders:staff_order_edit", args=[self.order.pk]),
+            {
+                "name": "",
+                "phone": "123",
+                "email": "",
+                "address": "",
+                "note": "",
+                "status": "processing",
+            },
+        )
+        self.assertEqual(response.status_code, 422)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.name, "Мария")
+
+    def test_delete_removes_order_and_keeps_emails(self):
+        emails_before = OutgoingEmail.objects.count()
+        self.assertGreater(emails_before, 0)
+        self.client.force_login(self.admin)
+        next_url = reverse("orders:staff_orders") + "?status=processing"
+        response = self.client.post(
+            reverse("orders:staff_order_delete", args=[self.order.pk]),
+            {"next": next_url},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, next_url)
+        self.assertFalse(Order.objects.filter(pk=self.order.pk).exists())
+        self.assertEqual(OrderItem.objects.count(), 0)
+        # Записи писем остаются (снимок номера, связь SET_NULL).
+        self.assertEqual(OutgoingEmail.objects.count(), emails_before)
+
+    def test_orders_export_returns_xlsx(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_orders_export"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        wb = load_workbook(io.BytesIO(response.content))
+        ws = wb["Заказы"]
+        self.assertEqual(ws["A1"].value, "Номер")
+        self.assertEqual(ws["A2"].value, self.order.number)
+
+    def test_order_export_single(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(
+            reverse("orders:staff_order_export", args=[self.order.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        wb = load_workbook(io.BytesIO(response.content))
+        ws = wb["Заказ"]
+        self.assertEqual(ws["A1"].value, "Номер заказа")
+        self.assertEqual(ws["B1"].value, self.order.number)
+
+
+class StaffCustomerServiceTests(TestCase):
+    """Клиентская база: строки со сводкой, поиск, лимит."""
+
+    @classmethod
+    def setUpTestData(cls):
+        setup_catalog(cls)
+        cls.order = create_order(
+            lines=[(cls.variant.pk, 1)],
+            promo_code=None,
+            **{**CONTACT, "email": "maria@example.com"},
+        )
+
+    def test_row_contains_contacts_addresses_and_totals(self):
+        rows, total = staff_services.get_customer_rows()
+        self.assertEqual(total, 1)
+        row = rows[0]
+        self.assertEqual(row.customer.name, "Мария")
+        self.assertEqual(row.orders_count, 1)
+        self.assertEqual(row.total_spent, Decimal("3900.00"))
+        self.assertEqual(row.addresses, [CONTACT["address"]])
+
+    def test_search_by_phone_and_address_case_insensitive(self):
+        by_phone, _ = staff_services.get_customer_rows("918) 123")
+        self.assertEqual(len(by_phone), 1)
+        by_address, _ = staff_services.get_customer_rows("тАгАнрогскАя")
+        self.assertEqual(len(by_address), 1)
+        none_found, _ = staff_services.get_customer_rows("никого")
+        self.assertEqual(none_found, [])
+
+    def test_default_limit_and_lifting_by_search(self):
+        customers = [
+            Customer(name=f"Гость {i}", phone=f"+7 (900) 111-22-{i % 100:02d}")
+            for i in range(105)
+        ]
+        Customer.objects.bulk_create(customers)
+        rows, total = staff_services.get_customer_rows()
+        self.assertEqual(len(rows), staff_services.DEFAULT_LIMIT)
+        self.assertEqual(total, 106)
+        stats = staff_services.summarize_customers(rows, total, "")
+        self.assertTrue(stats.limited)
+        found, total_found = staff_services.get_customer_rows("гость 42")
+        self.assertEqual(total_found, 1)
+        self.assertFalse(
+            staff_services.summarize_customers(found, total_found, "гость 42").limited
+        )
+
+
+class StaffCustomersViewTests(TestCase):
+    """Страница клиентской базы: список, экспорт отфильтрованного и всего."""
+
+    @classmethod
+    def setUpTestData(cls):
+        setup_catalog(cls)
+        cls.order = create_order(
+            lines=[(cls.variant.pk, 1)], promo_code=None, **CONTACT
+        )
+        cls.admin = make_staff_user("admin7", superuser=True)
+
+    def test_list_renders_customer(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_customers"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Мария")
+        self.assertContains(response, CONTACT["address"])
+        self.assertContains(response, "Экспорт всей базы")
+
+    def test_filtered_export_returns_xlsx(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_customers_export"))
+        self.assertEqual(response.status_code, 200)
+        wb = load_workbook(io.BytesIO(response.content))
+        ws = wb["Клиенты"]
+        self.assertEqual(ws["A1"].value, "Имя")
+        self.assertEqual(ws["A2"].value, "Мария")
+
+    def test_export_all_ignores_limit(self):
+        customers = [
+            Customer(name=f"Гость {i}", phone=f"+7 (900) 111-22-{i % 100:02d}")
+            for i in range(105)
+        ]
+        Customer.objects.bulk_create(customers)
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_customers_export_all"))
+        self.assertEqual(response.status_code, 200)
+        wb = load_workbook(io.BytesIO(response.content))
+        # шапка + Мария из setUpTestData + 105 гостей
+        self.assertEqual(wb["Клиенты"].max_row, 107)
+
+    def test_limit_warning(self):
+        customers = [
+            Customer(name=f"Гость {i}", phone=f"+7 (900) 111-22-{i % 100:02d}")
+            for i in range(105)
+        ]
+        Customer.objects.bulk_create(customers)
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse("orders:staff_customers"))
+        self.assertContains(response, "Показаны последние 100 покупателей")
+        response = self.client.get(reverse("orders:staff_customers"), {"q": "мария"})
+        self.assertNotContains(response, "Показаны последние 100")
+
+
+class AdminExcelExportTests(TestCase):
+    """Экспорт в Excel прямо из Django Admin."""
+
+    @classmethod
+    def setUpTestData(cls):
+        setup_catalog(cls)
+        cls.order = create_order(
+            lines=[(cls.variant.pk, 1)], promo_code=None, **CONTACT
+        )
+        cls.admin = make_staff_user("admin7", superuser=True)
+
+    def _run_action(self, url_name, modeladmin_url):
+        self.client.force_login(self.admin)
+        return self.client.post(
+            reverse(url_name),
+            {"action": "export_excel", "_selected_action": [self.order.pk]},
+            follow=True,
+        )
+
+    def test_orders_export_action(self):
+        response = self._run_action(
+            "admin:orders_order_changelist", "orders_order"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        wb = load_workbook(io.BytesIO(response.content))
+        self.assertEqual(wb["Заказы"]["A2"].value, self.order.number)
+
+    def test_customers_export_action(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("admin:orders_customer_changelist"),
+            {"action": "export_excel", "_selected_action": [self.order.customer.pk]},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        wb = load_workbook(io.BytesIO(response.content))
+        self.assertEqual(wb["Клиенты"]["A2"].value, "Мария")
+
+
+class HeaderAuthIconsTests(TestCase):
+    """Иконки шапки: вход для анонима, меню/админка/выход для авторизованных."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.manager = make_staff_user("manager", manager=True)
+
+    def test_anonymous_sees_login_icon_only(self):
+        response = self.client.get(reverse("shop:home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="Войти"')
+        self.assertNotContains(response, 'aria-label="Открыть меню"')
+        self.assertNotContains(response, 'aria-label="Выйти"')
+
+    def test_authenticated_sees_menu_admin_logout(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("shop:home"))
+        self.assertContains(response, 'aria-label="Открыть меню"')
+        self.assertContains(response, 'aria-label="Администрирование"')
+        self.assertContains(response, 'aria-label="Выйти"')
+        # В меню есть ссылки на staff-страницы.
+        self.assertContains(response, reverse("orders:staff_orders"))
+        self.assertContains(response, reverse("orders:staff_customers"))

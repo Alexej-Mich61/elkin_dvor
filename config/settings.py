@@ -95,6 +95,11 @@ DATABASES = {
 }
 
 
+# Вход/выход сотрудников (этап 7): публичной регистрации и сброса пароля нет.
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "shop:home"
+LOGOUT_REDIRECT_URL = "shop:home"
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",

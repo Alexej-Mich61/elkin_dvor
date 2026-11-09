@@ -9,6 +9,7 @@ from django.contrib import admin
 from django.db.models import Count
 from django.utils import timezone
 
+from . import exports, staff_services
 from .models import (
     Customer,
     Order,
@@ -98,6 +99,7 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ("number", "name", "phone", "email", "address")
     list_editable = ("status",)
     inlines = (OrderItemInline, OutgoingEmailInline)
+    actions = ("export_excel",)
     # Снимок оформления (контакты, адрес, деньги, промокод) — исторический:
     # после создания заказа не редактируется, только статус.
     readonly_fields = (
@@ -122,6 +124,13 @@ class OrderAdmin(admin.ModelAdmin):
     def total_display(self, obj):
         return f"{format_amount(obj.total)} руб."
 
+    @admin.action(description="Экспорт в Excel")
+    def export_excel(self, request, queryset):
+        """Те же колонки, что на staff-странице заказов."""
+        orders = list(queryset.prefetch_related("items"))
+        wb = exports.orders_workbook(orders)
+        return exports.excel_response(wb, exports.export_filename("заказы"))
+
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -130,6 +139,7 @@ class CustomerAdmin(admin.ModelAdmin):
     list_display = ("name", "phone", "email", "orders_count", "created_at")
     search_fields = ("name", "phone", "phone_normalized", "email")
     readonly_fields = ("phone_normalized", "created_at", "updated_at")
+    actions = ("export_excel",)
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(_orders_count=Count("orders"))
@@ -137,6 +147,13 @@ class CustomerAdmin(admin.ModelAdmin):
     @admin.display(description="Заказов", ordering="_orders_count")
     def orders_count(self, obj):
         return obj._orders_count
+
+    @admin.action(description="Экспорт в Excel")
+    def export_excel(self, request, queryset):
+        """Колонки как на staff-странице клиентской базы (контакты + адреса)."""
+        rows = staff_services.build_customer_rows(queryset)
+        wb = exports.customers_workbook(rows)
+        return exports.excel_response(wb, exports.export_filename("клиенты"))
 
 
 @admin.register(OutgoingEmail)
