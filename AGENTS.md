@@ -243,7 +243,8 @@ venv/Scripts/python.exe manage.py check
   секретов и тел писем нет.
 - Стили: править только `theme/static_src/src/styles.css`; сборку доводить до
   `theme/static/css/dist/` (команды выше). Классы Tailwind/daisyUI — в шаблонах.
-  Фирменная палитра (зелёный/красный/сливочный) и декоративный класс `bg-snow` заданы
+  Фирменная палитра (зелёный/красный/сливочный + `frost` — почти белый с зеленцой
+  для стеклянных панелей) и декоративный класс `bg-snow` заданы
   в `styles.css` поверх встроенной темы daisyUI; шрифт Nunito подключается в `base.html`.
 - В `base.html` CSS подключается тегом `{% tailwind_css %}`, скрипты — Alpine.js и HTMX (CDN).
 - Корзина сессионная: в сессии только `{variant_id: quantity}`; вся логика — в
