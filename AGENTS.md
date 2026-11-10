@@ -136,7 +136,12 @@ venv/Scripts/python.exe manage.py check
   - `static/css/dist/styles.css` — собранный CSS (генерируется, вручную не править).
 - `templates/` — глобальные шаблоны (прописано в `settings.TEMPLATES.DIRS`):
   - `base.html` — каркас (head, SEO-блоки title/meta_description, шапка/подвал через includes, Alpine+HTMX CDN);
-  - `home.html` — главная: баннер, преимущества, каталог по категориям, «популярные дополнения», контакты;
+  - `home.html` — главная: все секции внутри корневого контейнера
+    `bg-pine-deep` (на всю ширину и высоту); hero — изображение и баннер
+    `bg-wine` с отступами px-4 от краёв; преимущества (`bg-moss`, иконки
+    w-28 / 2xl:w-48), каталог, «популярные дополнения» (`bg-sage`) и контакты
+    (`bg-moss`) — вкладки с отступом `mx-4` от краёв экрана; заголовки —
+    `font-soyuz`; карточки товаров в каруселях — w-52 sm:w-56;
   - `shop/category.html`, `shop/product.html` — страницы категории и товара (галерея Alpine, выбор размера с HTMX-ценой, JSON-LD);
   - `orders/checkout.html` — форма оформления (звёздочки обязательных полей,
     текст-помощники, сводка заказа); `orders/order_success.html` — подтверждение
@@ -246,9 +251,14 @@ venv/Scripts/python.exe manage.py check
   секретов и тел писем нет.
 - Стили: править только `theme/static_src/src/styles.css`; сборку доводить до
   `theme/static/css/dist/` (команды выше). Классы Tailwind/daisyUI — в шаблонах.
-  Фирменная палитра (зелёный/красный/сливочный + `frost` — почти белый с зеленцой
-  для стеклянных панелей) и декоративный класс `bg-snow` заданы
-  в `styles.css` поверх встроенной темы daisyUI; шрифт Nunito подключается в `base.html`.
+  Фирменная палитра задана в `styles.css` поверх встроенной темы daisyUI:
+  pine/pine-dark/cream/crimson/frost (фирменные) и палитра главной —
+  `pine-deep` #0d2c1a (корневой контейнер, шапка), `moss` #1a472a (преимущества,
+  подвал), `sage` #e8ece4 (каталог, дополнения), `wine` #9d0709 (hero-баннер).
+  Шрифты — self-hosted (`static/fonts/`, `@font-face` в styles.css): Montserrat
+  (основной, `--font-sans`; один файл веса 400 — жирные начертания
+  синтезируются, диапазон 400 700), Soyuz Grotesk (коммерческий, локальный .otf;
+  заголовки, утилита `font-soyuz`), Marck Script (зарезервирован, не используется).
 - В `base.html` CSS подключается тегом `{% tailwind_css %}`, скрипты — Alpine.js и HTMX (CDN).
 - Корзина сессионная: в сессии только `{variant_id: quantity}`; вся логика — в
   `cart/services.py`, views не содержат логики изменения сессии. Подробности — §8 `docs/architecture.md`.

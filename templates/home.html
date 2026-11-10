@@ -2,170 +2,176 @@
 {% load static %}
 
 {% block content %}
-    <!-- 1. Баннер: предложение + фото ёлки -->
-    <section class="bg-pine text-cream bg-snow">
-        <div class="container mx-auto px-4">
-            <div class="grid lg:grid-cols-5 lg:items-center">
-                <!-- Текстовый блок: на мобильном первым, на десктопе справа -->
-                <div class="relative z-10 order-1 py-10 lg:order-2 lg:col-span-2 lg:py-16 lg:pl-8">
-                    <div class="rounded-2xl bg-crimson px-6 py-8 text-white bg-snow shadow-2xl sm:px-10 sm:py-10 lg:-ml-24">
-                        <h1 class="text-4xl font-black leading-[1.05] sm:text-5xl lg:text-6xl">
-                            Живые ёлки, сосны и&nbsp;пихты
-                        </h1>
-                        <p class="mt-4 text-lg font-bold text-white/90 sm:text-xl">Ростов-на-Дону</p>
-                        <ul class="mt-2 space-y-1 text-base font-semibold text-white/90 sm:text-lg">
-                            <li>Бесплатная доставка</li>
-                            <li>Оплата при получении</li>
-                        </ul>
+    <!-- Корневой контейнер главной: фон #0d2c1a на всю ширину и высоту,
+         все секции внутри с одинаковым боковым отступом px-4 -->
+    <div class="min-h-screen w-full bg-pine-deep">
+        <!-- 1. Баннер: фон секции прозрачный (виден корневой контейнер),
+               баннер #9D0709 непрозрачный, прямые углы -->
+        <section class="text-cream">
+            <div class="px-4">
+                <div class="grid lg:grid-cols-5 lg:items-center">
+                    <!-- Текстовый блок: на мобильном первым, на десктопе справа -->
+                    <div class="relative z-10 order-1 py-10 lg:order-2 lg:col-span-2 lg:py-16 lg:pl-8">
+                        <div class="bg-wine px-6 py-8 text-white shadow-2xl sm:px-10 sm:py-10 lg:-ml-24">
+                            <h1 class="font-soyuz text-4xl font-black leading-[1.05] sm:text-5xl lg:text-6xl">
+                                Живые ёлки, сосны и&nbsp;пихты
+                            </h1>
+                            <p class="mt-4 text-lg font-bold text-white/90 sm:text-xl">Ростов-на-Дону</p>
+                            <ul class="mt-2 space-y-1 text-base font-semibold text-white/90 sm:text-lg">
+                                <li>Бесплатная доставка</li>
+                                <li>Оплата при получении</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Фото ёлки: на десктопе портретное слева, на мобильном — панорамное -->
+                    <div class="relative order-2 lg:order-1 lg:col-span-3">
+                        <picture>
+                            <source media="(min-width: 1024px)" srcset="{% static 'img/hero-tree.webp' %}">
+                            <img src="{% static 'img/hero-tree-wide.webp' %}" alt="Наряженная живая ёлка с подарками у камина в гостиной"
+                                 width="778" height="380" class="h-64 w-full object-cover sm:h-80 lg:h-[560px]">
+                        </picture>
                     </div>
                 </div>
-                <!-- Фото ёлки: на десктопе портретное слева, на мобильном — панорамное -->
-                <div class="relative order-2 lg:order-1 lg:col-span-3">
-                    <picture>
-                        <source media="(min-width: 1024px)" srcset="{% static 'img/hero-tree.webp' %}">
-                        <img src="{% static 'img/hero-tree-wide.webp' %}" alt="Наряженная живая ёлка с подарками у камина в гостиной"
-                             width="778" height="380" class="h-64 w-full object-cover sm:h-80 lg:h-[560px]">
-                    </picture>
+            </div>
+        </section>
+
+        <!-- 2. Преимущества: фон как у подвала (#1A472A), секция с отступами
+               от краёв экрана как hero-баннер, компактные отступы, крупные иконки -->
+        <section class="mx-4 bg-moss text-cream" aria-label="Преимущества">
+            <div class="px-4 py-6 sm:py-8">
+                <div class="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">
+                    <div class="flex flex-col items-center gap-3 text-center">
+                        {% include 'includes/icon.html' with icon='truck' class_name='w-28 h-28 2xl:w-48 2xl:h-48 text-cream/90' %}
+                        <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                            Бесплатная доставка<br>до двери на следующий день
+                        </p>
+                    </div>
+                    <div class="flex flex-col items-center gap-3 text-center">
+                        {% include 'includes/icon.html' with icon='payment' class_name='w-28 h-28 2xl:w-48 2xl:h-48 text-cream/90' %}
+                        <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                            Оплата при получении<br>новогоднего дерева
+                        </p>
+                    </div>
+                    <div class="flex flex-col items-center gap-3 text-center">
+                        {% include 'includes/icon.html' with icon='globe' class_name='w-28 h-28 2xl:w-48 2xl:h-48 text-cream/90' %}
+                        <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                            Деревья из питомников<br>Дании и России
+                        </p>
+                    </div>
+                    <div class="flex flex-col items-center gap-3 text-center">
+                        {% include 'includes/icon.html' with icon='trees' class_name='w-28 h-28 2xl:w-48 2xl:h-48 text-cream/90' %}
+                        <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
+                            Широчайший ассортимент<br>и любые размеры
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- 2. Преимущества -->
-    <section class="border-t border-white/10 bg-pine text-cream bg-snow" aria-label="Преимущества">
-        <div class="container mx-auto px-4 py-12 sm:py-16">
-            <div class="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4">
-                <div class="flex flex-col items-center gap-4 text-center">
-                    {% include 'includes/icon.html' with icon='truck' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
-                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
-                        Бесплатная доставка<br>до двери на следующий день
-                    </p>
-                </div>
-                <div class="flex flex-col items-center gap-4 text-center">
-                    {% include 'includes/icon.html' with icon='payment' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
-                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
-                        Оплата при получении<br>новогоднего дерева
-                    </p>
-                </div>
-                <div class="flex flex-col items-center gap-4 text-center">
-                    {% include 'includes/icon.html' with icon='globe' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
-                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
-                        Деревья из питомников<br>Дании и России
-                    </p>
-                </div>
-                <div class="flex flex-col items-center gap-4 text-center">
-                    {% include 'includes/icon.html' with icon='trees' class_name='w-14 h-14 sm:w-16 sm:h-16 text-cream/90' %}
-                    <p class="max-w-[220px] text-sm font-semibold leading-snug sm:text-base">
-                        Широчайший ассортимент<br>и любые размеры
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 3. Каталог: вкладки категорий (Alpine) + карусель товаров активной категории.
-           Без JS все панели видны подряд — контент остаётся доступным. -->
-    {% if tree_categories %}
-        <section id="catalog" class="bg-base-100"
-                 x-data="{ activeTab: '{{ tree_categories.0.slug }}' }">
-            <div class="container mx-auto px-4 pt-14">
-                <div class="flex flex-wrap items-center justify-center gap-2 pb-4 md:gap-6">
-                    <div class="flex flex-wrap justify-center gap-x-8 gap-y-2 text-3xl font-black sm:text-4xl"
-                         role="tablist" aria-label="Категории каталога">
-                        {% for category in tree_categories %}
-                            <button type="button" role="tab" id="tab-{{ category.slug }}"
-                                    aria-controls="panel-{{ category.slug }}"
-                                    :aria-selected="activeTab === '{{ category.slug }}'"
-                                    @click="activeTab = '{{ category.slug }}'"
-                                    class="pb-2 transition hover:text-primary"
-                                    :class="activeTab === '{{ category.slug }}' ? 'text-primary underline decoration-primary decoration-4 underline-offset-8' : 'text-base-content/30'">
-                                {{ category.name|lower }}
+        <!-- 3. Каталог: вкладки категорий (Alpine) + карусель товаров активной категории.
+               Без JS все панели видны подряд — контент остаётся доступным. -->
+        {% if tree_categories %}
+            <section id="catalog" class="mx-4 bg-sage"
+                     x-data="{ activeTab: '{{ tree_categories.0.slug }}' }">
+                <div class="px-4 pt-14">
+                    <div class="flex flex-wrap items-center justify-center gap-2 pb-4 md:gap-6">
+                        <div class="font-soyuz flex flex-wrap justify-center gap-x-8 gap-y-2 text-3xl font-black sm:text-4xl"
+                             role="tablist" aria-label="Категории каталога">
+                            {% for category in tree_categories %}
+                                <button type="button" role="tab" id="tab-{{ category.slug }}"
+                                        aria-controls="panel-{{ category.slug }}"
+                                        :aria-selected="activeTab === '{{ category.slug }}'"
+                                        @click="activeTab = '{{ category.slug }}'"
+                                        class="pb-2 transition hover:text-primary"
+                                        :class="activeTab === '{{ category.slug }}' ? 'text-primary underline decoration-primary decoration-4 underline-offset-8' : 'text-base-content/30'">
+                                    {{ category.name|lower }}
+                                </button>
+                            {% endfor %}
+                        </div>
+                        <div class="hidden gap-2 md:flex" x-cloak>
+                            <button type="button" aria-label="Предыдущие товары"
+                                    class="btn btn-circle btn-outline btn-primary btn-sm"
+                                    @click="$refs['carousel-' + activeTab].scrollBy({ left: -300, behavior: 'smooth' })">
+                                {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
                             </button>
-                        {% endfor %}
+                            <button type="button" aria-label="Следующие товары"
+                                    class="btn btn-circle btn-outline btn-primary btn-sm"
+                                    @click="$refs['carousel-' + activeTab].scrollBy({ left: 300, behavior: 'smooth' })">
+                                {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
+                            </button>
+                        </div>
                     </div>
-                    <div class="hidden gap-2 md:flex" x-cloak>
-                        <button type="button" aria-label="Предыдущие товары"
-                                class="btn btn-circle btn-outline btn-primary btn-sm"
-                                @click="$refs['carousel-' + activeTab].scrollBy({ left: -300, behavior: 'smooth' })">
-                            {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
-                        </button>
-                        <button type="button" aria-label="Следующие товары"
-                                class="btn btn-circle btn-outline btn-primary btn-sm"
-                                @click="$refs['carousel-' + activeTab].scrollBy({ left: 300, behavior: 'smooth' })">
-                            {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
-                        </button>
-                    </div>
-                </div>
 
-                {% for category in tree_categories %}
-                    <div id="panel-{{ category.slug }}" role="tabpanel" aria-labelledby="tab-{{ category.slug }}"
-                         x-show="activeTab === '{{ category.slug }}'"
-                         x-ref="carousel-{{ category.slug }}"
-                         class="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
-                        {% for product in category.products.all %}
+                    {% for category in tree_categories %}
+                        <div id="panel-{{ category.slug }}" role="tabpanel" aria-labelledby="tab-{{ category.slug }}"
+                             x-show="activeTab === '{{ category.slug }}'"
+                             x-ref="carousel-{{ category.slug }}"
+                             class="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
+                            {% for product in category.products.all %}
+                                {% include 'partials/product_card.html' %}
+                            {% endfor %}
+                        </div>
+                        <p class="mt-1" x-show="activeTab === '{{ category.slug }}'">
+                            <a href="{% url 'shop:category' category_slug=category.slug %}"
+                               class="font-bold text-primary underline-offset-4 hover:underline">
+                                Все товары категории «{{ category.name }}» →
+                            </a>
+                        </p>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <!-- 4. Популярные дополнения (подставки, украшения и т.п.) — тоже каруселью -->
+        {% if addon_products %}
+            <section id="addons" class="mx-4 bg-sage" x-data>
+                <div class="px-4 py-14">
+                    <div class="flex flex-wrap items-center justify-center gap-2 md:justify-between">
+                        <h2 class="font-soyuz w-full text-center text-3xl font-black sm:text-4xl md:w-auto md:text-left">
+                            популярные дополнения
+                        </h2>
+                        <div class="hidden gap-2 md:flex" x-cloak>
+                            <button type="button" aria-label="Предыдущие дополнения"
+                                    class="btn btn-circle btn-outline btn-primary btn-sm"
+                                    @click="$refs.addonsCarousel.scrollBy({ left: -300, behavior: 'smooth' })">
+                                {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
+                            </button>
+                            <button type="button" aria-label="Следующие дополнения"
+                                    class="btn btn-circle btn-outline btn-primary btn-sm"
+                                    @click="$refs.addonsCarousel.scrollBy({ left: 300, behavior: 'smooth' })">
+                                {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
+                            </button>
+                        </div>
+                    </div>
+                    <div x-ref="addonsCarousel"
+                         class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
+                        {% for product in addon_products %}
                             {% include 'partials/product_card.html' %}
                         {% endfor %}
                     </div>
-                    <p class="mt-1" x-show="activeTab === '{{ category.slug }}'">
-                        <a href="{% url 'shop:category' category_slug=category.slug %}"
-                           class="font-bold text-primary underline-offset-4 hover:underline">
-                            Все товары категории «{{ category.name }}» →
-                        </a>
-                    </p>
-                {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <!-- 5. Контакты: фон как у преимуществ (#1A472A), отступы от краёв -->
+        <section id="contacts" class="mx-4 scroll-mt-24 bg-moss text-cream">
+            <div class="flex flex-col items-center gap-8 px-4 py-16 text-center">
+                <a href="tel:{{ SHOP_PHONE_TEL }}"
+                   class="inline-block rounded-full border-[3px] border-[#e04a3f] px-8 py-3 text-2xl font-black tracking-wide transition hover:bg-[#e04a3f]/20 sm:text-4xl">
+                    {{ SHOP_PHONE_DISPLAY }}
+                </a>
+                <div class="flex items-center gap-8">
+                    <a href="{{ SHOP_TELEGRAM_URL }}" target="_blank" rel="noopener" aria-label="Написать в Telegram"
+                       class="text-cream/90 transition hover:text-cream">
+                        {% include 'includes/icon.html' with icon='telegram' class_name='w-9 h-9' %}
+                    </a>
+                    <a href="{{ SHOP_WHATSAPP_URL }}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"
+                       class="text-cream/90 transition hover:text-cream">
+                        {% include 'includes/icon.html' with icon='whatsapp' class_name='w-9 h-9' %}
+                    </a>
+                </div>
+                <address class="text-sm font-semibold not-italic text-cream/80 sm:text-base">{{ SHOP_ADDRESS }}</address>
             </div>
         </section>
-    {% endif %}
-
-    <!-- 4. Популярные дополнения (подставки, украшения и т.п.) — тоже каруселью -->
-    {% if addon_products %}
-        <section id="addons" class="border-t border-base-300/60 bg-base-100" x-data>
-            <div class="container mx-auto px-4 py-14">
-                <div class="flex flex-wrap items-center justify-center gap-2 md:justify-between">
-                    <h2 class="w-full text-center text-3xl font-black sm:text-4xl md:w-auto md:text-left">
-                        популярные дополнения
-                    </h2>
-                    <div class="hidden gap-2 md:flex" x-cloak>
-                        <button type="button" aria-label="Предыдущие дополнения"
-                                class="btn btn-circle btn-outline btn-primary btn-sm"
-                                @click="$refs.addonsCarousel.scrollBy({ left: -300, behavior: 'smooth' })">
-                            {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
-                        </button>
-                        <button type="button" aria-label="Следующие дополнения"
-                                class="btn btn-circle btn-outline btn-primary btn-sm"
-                                @click="$refs.addonsCarousel.scrollBy({ left: 300, behavior: 'smooth' })">
-                            {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
-                        </button>
-                    </div>
-                </div>
-                <div x-ref="addonsCarousel"
-                     class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
-                    {% for product in addon_products %}
-                        {% include 'partials/product_card.html' %}
-                    {% endfor %}
-                </div>
-            </div>
-        </section>
-    {% endif %}
-
-    <!-- 5. Контакты -->
-    <section id="contacts" class="scroll-mt-24 bg-pine text-cream bg-snow">
-        <div class="container mx-auto flex flex-col items-center gap-8 px-4 py-16 text-center">
-            <a href="tel:{{ SHOP_PHONE_TEL }}"
-               class="inline-block rounded-full border-[3px] border-[#e04a3f] px-8 py-3 text-2xl font-black tracking-wide transition hover:bg-[#e04a3f]/20 sm:text-4xl">
-                {{ SHOP_PHONE_DISPLAY }}
-            </a>
-            <div class="flex items-center gap-8">
-                <a href="{{ SHOP_TELEGRAM_URL }}" target="_blank" rel="noopener" aria-label="Написать в Telegram"
-                   class="text-cream/90 transition hover:text-cream">
-                    {% include 'includes/icon.html' with icon='telegram' class_name='w-9 h-9' %}
-                </a>
-                <a href="{{ SHOP_WHATSAPP_URL }}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"
-                   class="text-cream/90 transition hover:text-cream">
-                    {% include 'includes/icon.html' with icon='whatsapp' class_name='w-9 h-9' %}
-                </a>
-            </div>
-            <address class="text-sm font-semibold not-italic text-cream/80 sm:text-base">{{ SHOP_ADDRESS }}</address>
-        </div>
-    </section>
+    </div>
 {% endblock %}

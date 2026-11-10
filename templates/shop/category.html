@@ -4,7 +4,7 @@
 {% block meta_description %}{% if category.seo_description %}{{ category.seo_description }}{% else %}Живые {{ category.name|lower }} с бесплатной доставкой по Ростову-на-Дону. Оплата при получении.{% endif %}{% endblock %}
 
 {% block content %}
-    <div class="bg-pine text-cream bg-snow">
+    <div class="bg-pine-deep text-cream">
         <div class="container mx-auto px-4 py-10">
             <nav aria-label="Хлебные крошки" class="text-sm text-cream/70">
                 <ol class="flex flex-wrap items-center gap-2">
@@ -13,7 +13,7 @@
                     <li aria-current="page" class="font-bold text-cream">{{ category.name }}</li>
                 </ol>
             </nav>
-            <h1 class="mt-4 text-4xl font-black sm:text-5xl">{{ category.name }}</h1>
+            <h1 class="font-soyuz mt-4 text-4xl font-black sm:text-5xl">{{ category.name }}</h1>
             {% if category.description %}
                 <p class="mt-3 max-w-2xl text-cream/80">{{ category.description }}</p>
             {% endif %}

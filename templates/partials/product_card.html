@@ -1,8 +1,8 @@
 {% load shop_extras %}
-<article class="{{ card_class|default:'w-60 sm:w-64' }} shrink-0 snap-start scroll-mt-24">
+<article class="{{ card_class|default:'w-52 sm:w-56' }} shrink-0 snap-start scroll-mt-24">
     <a href="{% url 'shop:product' category_slug=product.category.slug product_slug=product.slug %}"
        class="group flex h-full flex-col">
-        <div class="overflow-hidden rounded-xl bg-white shadow-sm">
+        <div class="overflow-hidden bg-white shadow-sm">
             {% main_image product as image %}
             {% if image %}
                 <img src="{{ image.image.url }}" alt="{{ image.alt|default:product.name }}" width="480" height="600"

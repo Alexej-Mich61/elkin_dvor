@@ -3,7 +3,7 @@
      родителя, а родитель header — эта обёртка; ей родитель — body на всю
      высоту страницы. -->
 <div x-data="{ drawerOpen: false }" @keydown.escape.window="drawerOpen = false" class="sticky top-0 z-40">
-    <header class="bg-pine text-cream bg-snow">
+    <header class="bg-pine-deep text-cream">
         <div class="container mx-auto px-4 flex items-center justify-between gap-4 py-2.5 sm:py-3">
             <a href="{% url 'shop:home' %}" class="flex shrink-0 items-center" aria-label="Ёлкин двор — на главную">
                 <img src="{% static 'img/logo_elkin_dvor.png' %}" alt="Ёлкин двор" class="h-12 w-auto sm:h-16">

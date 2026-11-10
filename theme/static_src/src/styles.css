@@ -5,15 +5,49 @@
   themes: "light --default";
 }
 
+/* Шрифты проекта. Soyuz Grotesk — коммерческий, подключен локальным файлом;
+   Montserrat и Marck Script — self-hosted подмножества (кириллица).
+   У Montserrat один файл веса 400 — для жирных начертаний (500–700)
+   браузер применяет синтетическое ужирнение (font-weight: 400 700). */
+@font-face {
+  font-family: "Soyuz Grotesk";
+  src: url("/static/fonts/Soyuz_Grotesk_Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Montserrat";
+  src: url("/static/fonts/Montserrat-normal-400-cyrillic.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Marck Script";
+  src: url("/static/fonts/Marck_Script-normal-400-cyrillic.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 @theme {
-  --font-sans: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-sans: "Montserrat", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-soyuz: "Soyuz Grotesk", "Montserrat", sans-serif;
+  --font-marck: "Marck Script", cursive;
 
   /* Фирменные цвета «Ёлкин двор» */
   --color-pine: #0d3b26;        /* глубокий ёлочный зелёный */
-  --color-pine-dark: #092c1c;   /* ещё темнее для подвала */
+  --color-pine-dark: #092c1c;   /* ещё темнее (стекло плавающей панели) */
   --color-cream: #f6f2e9;       /* тёплый сливочный фон */
   --color-crimson: #b3122e;     /* новогодний красный */
   --color-frost: #f8fdf2;       /* почти белый с зеленцой (стеклянные панели) */
+
+  /* Палитра главной страницы */
+  --color-pine-deep: #0d2c1a;   /* корневой контейнер, шапка */
+  --color-moss: #1a472a;        /* преимущества, подвал */
+  --color-sage: #e8ece4;        /* каталог, популярные дополнения */
+  --color-wine: #9d0709;        /* hero-баннер */
 }
 
 /**
@@ -53,18 +87,6 @@
 /* Элементы, требующие Alpine.js (стрелки каруселей): без JS скрыты. */
 [x-cloak] {
   display: none !important;
-}
-
-/* Декоративный снег для тёмно-зелёных секций:
-   мягкие боке-точки разного размера + контурные снежинки. */
-.bg-snow {
-  background-image:
-    radial-gradient(circle, rgb(255 255 255 / 0.5) 1.5px, transparent 2px),
-    radial-gradient(circle, rgb(255 255 255 / 0.32) 2px, transparent 2.5px),
-    radial-gradient(circle, rgb(255 255 255 / 0.55) 1px, transparent 1.5px),
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%27120%27%20height%3D%27120%27%20viewBox%3D%270%200%20120%20120%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27white%27%20stroke-opacity%3D%270.35%27%20stroke-width%3D%271.6%27%20stroke-linecap%3D%27round%27%3E%3Cpath%20d%3D%27M60%2014v92M19%2037l82%2046M19%2083l82-46%27/%3E%3Cpath%20d%3D%27M51%2023l9%209%209-9M51%2097l9-9%209%209M28%2045l16%202-4-16M92%2075l-16-2%204%2016M28%2075l16-2-4%2016M92%2045l-16%202%204-16%27/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 140px 140px, 230px 230px, 90px 90px, 260px 260px;
-  background-position: 0 0, 45px 65px, 15px 10px, 30px 40px;
 }
 
 /**
