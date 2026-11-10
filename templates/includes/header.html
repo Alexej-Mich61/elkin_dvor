@@ -1,40 +1,47 @@
 {% load static %}
-<div x-data="{ drawerOpen: false }" @keydown.escape.window="drawerOpen = false">
+<!-- Sticky на обёртке, а не на <header>: «липнуть» можно только в пределах
+     родителя, а родитель header — эта обёртка; ей родитель — body на всю
+     высоту страницы. -->
+<div x-data="{ drawerOpen: false }" @keydown.escape.window="drawerOpen = false" class="sticky top-0 z-40">
     <header class="bg-pine text-cream bg-snow">
-        <div class="container mx-auto px-4 flex items-center justify-between gap-4 py-3 sm:py-4">
+        <div class="container mx-auto px-4 flex items-center justify-between gap-4 py-2.5 sm:py-3">
             <a href="{% url 'shop:home' %}" class="flex shrink-0 items-center" aria-label="Ёлкин двор — на главную">
-                <img src="{% static 'img/logo_elkin_dvor.png' %}" alt="Ёлкин двор" class="h-10 w-auto sm:h-12">
+                <img src="{% static 'img/logo_elkin_dvor.png' %}" alt="Ёлкин двор" class="h-12 w-auto sm:h-16">
             </a>
             <div class="flex items-center gap-2 sm:gap-4">
                 <a href="{{ SHOP_TELEGRAM_URL }}" target="_blank" rel="noopener" aria-label="Написать в Telegram"
                    class="hidden p-2 text-cream/90 transition hover:text-cream sm:inline-flex">
-                    {% include 'includes/icon.html' with icon='telegram' class_name='w-7 h-7' %}
+                    {% include 'includes/icon.html' with icon='telegram-solid' class_name='w-7 h-7' %}
+                </a>
+                <a href="tel:{{ SHOP_PHONE_TEL }}" aria-label="Позвонить: {{ SHOP_PHONE_DISPLAY }}"
+                   class="hidden p-2 text-cream/90 transition hover:text-cream sm:inline-flex">
+                    {% include 'includes/icon.html' with icon='phone-solid' class_name='w-7 h-7' %}
                 </a>
                 <a href="{{ SHOP_WHATSAPP_URL }}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"
                    class="hidden p-2 text-cream/90 transition hover:text-cream sm:inline-flex">
-                    {% include 'includes/icon.html' with icon='whatsapp' class_name='w-7 h-7' %}
+                    {% include 'includes/icon.html' with icon='whatsapp-solid' class_name='w-7 h-7' %}
                 </a>
                 {% if user.is_authenticated %}
                     <!-- Меню сотрудника: боковая панель справа -->
                     <button type="button" @click="drawerOpen = true" aria-label="Открыть меню"
                             class="p-2 text-cream/90 transition hover:text-cream">
-                        {% include 'includes/icon.html' with icon='menu' class_name='w-7 h-7' %}
+                        {% include 'includes/icon.html' with icon='menu-solid' class_name='w-7 h-7' %}
                     </button>
                     <a href="{% url 'admin:index' %}" aria-label="Администрирование"
                        class="p-2 text-cream/90 transition hover:text-cream">
-                        {% include 'includes/icon.html' with icon='gear' class_name='w-7 h-7' %}
+                        {% include 'includes/icon.html' with icon='gear-solid' class_name='w-7 h-7' %}
                     </a>
                     <form method="post" action="{% url 'logout' %}" class="m-0 inline-flex">
                         {% csrf_token %}
                         <button type="submit" aria-label="Выйти"
                                 class="p-2 text-cream/90 transition hover:text-cream">
-                            {% include 'includes/icon.html' with icon='logout' class_name='w-7 h-7' %}
+                            {% include 'includes/icon.html' with icon='logout-solid' class_name='w-7 h-7' %}
                         </button>
                     </form>
                 {% else %}
                     <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" aria-label="Войти"
                        class="p-2 text-cream/90 transition hover:text-cream">
-                        {% include 'includes/icon.html' with icon='user' class_name='w-7 h-7' %}
+                        {% include 'includes/icon.html' with icon='user-solid' class_name='w-7 h-7' %}
                     </a>
                 {% endif %}
                 {% include 'partials/cart_link.html' %}
@@ -68,28 +75,28 @@
                         <span class="text-lg font-black">Меню</span>
                         <button type="button" @click="drawerOpen = false" aria-label="Закрыть меню"
                                 class="p-1 text-cream/90 transition hover:text-cream">
-                            {% include 'includes/icon.html' with icon='x' class_name='w-6 h-6' %}
+                            {% include 'includes/icon.html' with icon='x-solid' class_name='w-6 h-6' %}
                         </button>
                     </div>
                     <div class="flex flex-col gap-1 px-3 py-4">
                         <a href="{% url 'shop:home' %}" @click="drawerOpen = false"
                            class="flex items-center gap-3 rounded-xl px-3 py-3 font-bold transition hover:bg-base-200">
-                            {% include 'includes/icon.html' with icon='home' class_name='w-6 h-6' %}
+                            {% include 'includes/icon.html' with icon='home-solid' class_name='w-6 h-6' %}
                             Главная
                         </a>
                         <a href="{% url 'shop:home' %}#catalog" @click="drawerOpen = false"
                            class="flex items-center gap-3 rounded-xl px-3 py-3 font-bold transition hover:bg-base-200">
-                            {% include 'includes/icon.html' with icon='box' class_name='w-6 h-6' %}
+                            {% include 'includes/icon.html' with icon='box-solid' class_name='w-6 h-6' %}
                             Товары
                         </a>
                         <a href="{% url 'orders:staff_orders' %}" @click="drawerOpen = false"
                            class="flex items-center gap-3 rounded-xl px-3 py-3 font-bold transition hover:bg-base-200">
-                            {% include 'includes/icon.html' with icon='clipboard' class_name='w-6 h-6' %}
+                            {% include 'includes/icon.html' with icon='clipboard-solid' class_name='w-6 h-6' %}
                             Заказы
                         </a>
                         <a href="{% url 'orders:staff_customers' %}" @click="drawerOpen = false"
                            class="flex items-center gap-3 rounded-xl px-3 py-3 font-bold transition hover:bg-base-200">
-                            {% include 'includes/icon.html' with icon='users' class_name='w-6 h-6' %}
+                            {% include 'includes/icon.html' with icon='users-solid' class_name='w-6 h-6' %}
                             Клиентская база
                         </a>
                     </div>
