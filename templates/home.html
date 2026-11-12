@@ -7,8 +7,8 @@
     <div class="min-h-screen w-full bg-pine-deep">
         <!-- 1. Баннер: фон секции прозрачный (виден корневой контейнер),
                баннер #9D0709 непрозрачный, прямые углы -->
-        <section class="text-cream">
-            <div class="px-4">
+        <section class="container mx-auto px-4 text-cream">
+            <div>
                 <div class="grid lg:grid-cols-5 lg:items-center">
                     <!-- Текстовый блок: на мобильном первым, на десктопе справа -->
                     <div class="relative z-10 order-1 py-10 lg:order-2 lg:col-span-2 lg:py-16 lg:pl-8">
@@ -37,8 +37,8 @@
 
         <!-- 2. Преимущества: фон как у подвала (#1A472A), секция с отступами
                от краёв экрана как hero-баннер, компактные отступы, крупные иконки -->
-        <section class="mx-4 bg-moss text-cream" aria-label="Преимущества">
-            <div class="px-4 py-6 sm:py-8">
+        <section class="container mx-auto px-4 bg-moss text-cream" aria-label="Преимущества">
+            <div class="py-6 sm:py-8">
                 <div class="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-4">
                     <div class="flex flex-col items-center gap-3 text-center">
                         {% include 'includes/icon.html' with icon='truck' class_name='w-28 h-28 2xl:w-48 2xl:h-48 text-cream/90' %}
@@ -71,9 +71,9 @@
         <!-- 3. Каталог: вкладки категорий (Alpine) + карусель товаров активной категории.
                Без JS все панели видны подряд — контент остаётся доступным. -->
         {% if tree_categories %}
-            <section id="catalog" class="mx-4 bg-sage"
+            <section id="catalog" class="container mx-auto px-4 bg-sage"
                      x-data="{ activeTab: '{{ tree_categories.0.slug }}' }">
-                <div class="px-4 pt-14">
+                <div class="pt-14">
                     <div class="flex flex-wrap items-center justify-center gap-2 pb-4 md:gap-6">
                         <div class="font-soyuz flex flex-wrap justify-center gap-x-8 gap-y-2 text-3xl font-black sm:text-4xl"
                              role="tablist" aria-label="Категории каталога">
@@ -124,8 +124,8 @@
 
         <!-- 4. Популярные дополнения (подставки, украшения и т.п.) — тоже каруселью -->
         {% if addon_products %}
-            <section id="addons" class="mx-4 bg-sage" x-data>
-                <div class="px-4 py-14">
+            <section id="addons" class="container mx-auto px-4 bg-sage" x-data>
+                <div class="py-14">
                     <div class="flex flex-wrap items-center justify-center gap-2 md:justify-between">
                         <h2 class="font-soyuz w-full text-center text-3xl font-black sm:text-4xl md:w-auto md:text-left">
                             популярные дополнения
@@ -154,8 +154,8 @@
         {% endif %}
 
         <!-- 5. Контакты: фон как у преимуществ (#1A472A), отступы от краёв -->
-        <section id="contacts" class="mx-4 scroll-mt-24 bg-moss text-cream">
-            <div class="flex flex-col items-center gap-8 px-4 py-16 text-center">
+        <section id="contacts" class="container mx-auto px-4 scroll-mt-24 bg-moss text-cream">
+            <div class="flex flex-col items-center gap-8 py-16 text-center">
                 <a href="tel:{{ SHOP_PHONE_TEL }}"
                    class="inline-block rounded-full border-[3px] border-[#e04a3f] px-8 py-3 text-2xl font-black tracking-wide transition hover:bg-[#e04a3f]/20 sm:text-4xl">
                     {{ SHOP_PHONE_DISPLAY }}

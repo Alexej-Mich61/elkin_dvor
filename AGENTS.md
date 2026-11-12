@@ -137,11 +137,12 @@ venv/Scripts/python.exe manage.py check
 - `templates/` — глобальные шаблоны (прописано в `settings.TEMPLATES.DIRS`):
   - `base.html` — каркас (head, SEO-блоки title/meta_description, шапка/подвал через includes, Alpine+HTMX CDN);
   - `home.html` — главная: все секции внутри корневого контейнера
-    `bg-pine-deep` (на всю ширину и высоту); hero — изображение и баннер
-    `bg-wine` с отступами px-4 от краёв; преимущества (`bg-moss`, иконки
+    `bg-pine-deep` (на всю ширину и высоту, фон растягивается на весь экран);
+    hero — изображение и баннер `bg-wine`; преимущества (`bg-moss`, иконки
     w-28 / 2xl:w-48), каталог, «популярные дополнения» (`bg-sage`) и контакты
-    (`bg-moss`) — вкладки с отступом `mx-4` от краёв экрана; заголовки —
-    `font-soyuz`; карточки товаров в каруселях — w-52 sm:w-56;
+    (`bg-moss`) — `container mx-auto px-4`, как staff-страницы (максимум
+    1536px на 2xl+, не растягиваются на весь экран); заголовки — `font-soyuz`;
+    карточки товаров в каруселях — w-52 sm:w-56;
   - `shop/category.html`, `shop/product.html` — страницы категории и товара (галерея Alpine, выбор размера с HTMX-ценой, JSON-LD);
   - `orders/checkout.html` — форма оформления (звёздочки обязательных полей,
     текст-помощники, сводка заказа); `orders/order_success.html` — подтверждение
