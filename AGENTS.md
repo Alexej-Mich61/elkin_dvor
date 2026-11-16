@@ -138,8 +138,9 @@ venv/Scripts/python.exe manage.py check
   - `base.html` — каркас (head, SEO-блоки title/meta_description, шапка/подвал через includes, Alpine+HTMX CDN);
   - `home.html` — главная: все секции внутри корневого контейнера
     `bg-pine-deep` (на всю ширину и высоту, фон растягивается на весь экран);
-    hero — изображение и баннер `bg-wine`; преимущества (`bg-moss`, иконки
-    w-28 / 2xl:w-48), каталог, «популярные дополнения» (`bg-sage`) и контакты
+    hero — изображение и баннер `bg-wine`; преимущества (`bg-moss`, иконки —
+    PNG `static/img/advantages/*.png`, единый размер h-28 / 2xl:h-48),
+    каталог, «популярные дополнения» (`bg-sage`) и контакты
     (`bg-moss`) — `container mx-auto px-4`, как staff-страницы (максимум
     1536px на 2xl+, не растягиваются на весь экран); заголовки — `font-soyuz`;
     карточки товаров в каруселях — w-52 sm:w-56;
