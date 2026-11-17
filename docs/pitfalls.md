@@ -5,6 +5,13 @@
 
 - `tailwind start` в django-tailwind 4.6 запускает ТОЛЬКО компилятор Tailwind (watch),
   Django-сервер не стартует — dev-режим требует двух терминалов (команды в `AGENTS.md`).
+- Сборка Tailwind 4.3.3 с `NODE_ENV=development` в этом проекте НЕ сканирует шаблоны
+  Django: классы, которые встречаются только в `templates/*.html`, молча пропадают
+  из собранного `styles.css` (авто-детект и `@source` не помогают). Production-режим
+  сканирует корректно, поэтому скрипт `dev` в `theme/static_src/package.json` переведён
+  на `NODE_ENV=production` (`--watch` сохранён). Если класс «не применился» —
+  проверить `grep -F 'класс{' theme/static/css/dist/styles.css`: класса нет — значит
+  нужна пересборка, перезапуск `runserver` ни на что не влияет.
 - `NPM_BIN_PATH` берётся из окружения, по умолчанию `npm.cmd` на Windows / `npm` иначе.
   django-tailwind запускает npm через subprocess без shell, поэтому на Windows нужен
   именно `npm.cmd`. Нестандартный путь к Node — задать `NPM_BIN_PATH` в `.env`.
