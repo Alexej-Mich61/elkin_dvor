@@ -20,7 +20,7 @@
                             <!-- Десктоп: ссылка на каталог с декоративным кольцом -->
                             <a href="#catalog" class="relative mb-12 hidden leading-none lg:inline-block">
                                 <img src="{% static 'img/text-decor.png' %}" alt="" width="242" height="72" aria-hidden="true"
-                                     class="absolute left-1/2 top-1/2 h-auto max-w-none w-[380px] -translate-x-1/2 -translate-y-1/2">
+                                     class="absolute left-1/2 top-1/2 h-auto max-w-none w-[240px] -translate-x-1/2 -translate-y-1/2">
                                 <span class="relative text-4xl font-bold">Заказать</span>
                             </a>
                             <div class="w-full bg-wine px-6 py-8 text-white shadow-2xl sm:px-10 sm:py-10">
@@ -169,21 +169,23 @@
             </section>
         {% endif %}
 
-        <!-- 5. Контакты: фон как у преимуществ (#1A472A), отступы от краёв -->
-        <section id="contacts" class="container mx-auto px-4 scroll-mt-24 bg-moss text-cream">
-            <div class="flex flex-col items-center gap-8 py-16 text-center">
-                <a href="tel:{{ SHOP_PHONE_TEL }}"
-                   class="inline-block rounded-full border-[3px] border-[#e04a3f] px-8 py-3 text-2xl font-black tracking-wide transition hover:bg-[#e04a3f]/20 sm:text-4xl">
-                    {{ SHOP_PHONE_DISPLAY }}
+        <!-- 5. Контакты: фон как у преимуществ (#1A472A), контент слева с отступом,
+               телефон в декоративном кольце (как ссылка «Заказать»), клик — набор номера -->
+        <section id="contacts" class="container mx-auto scroll-mt-24 bg-moss text-cream">
+            <div class="flex flex-col items-start gap-8 py-16 pl-8 text-left sm:pl-16">
+                <a href="tel:{{ SHOP_PHONE_TEL }}" class="relative inline-block leading-none transition hover:opacity-80">
+                    <img src="{% static 'img/text-decor.png' %}" alt="" width="242" height="72" aria-hidden="true"
+                         class="absolute left-1/2 top-1/2 h-auto max-w-none w-[min(270px,92vw)] -translate-x-1/2 -translate-y-1/2">
+                    <span class="relative text-2xl font-bold">{{ SHOP_PHONE_DISPLAY }}</span>
                 </a>
                 <div class="flex items-center gap-8">
                     <a href="{{ SHOP_TELEGRAM_URL }}" target="_blank" rel="noopener" aria-label="Написать в Telegram"
                        class="text-cream/90 transition hover:text-cream">
-                        {% include 'includes/icon.html' with icon='telegram' class_name='w-9 h-9' %}
+                        {% include 'includes/icon.html' with icon='telegram-solid' class_name='w-9 h-9' %}
                     </a>
                     <a href="{{ SHOP_WHATSAPP_URL }}" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"
                        class="text-cream/90 transition hover:text-cream">
-                        {% include 'includes/icon.html' with icon='whatsapp' class_name='w-9 h-9' %}
+                        {% include 'includes/icon.html' with icon='whatsapp-solid' class_name='w-9 h-9' %}
                     </a>
                 </div>
                 <address class="text-sm font-semibold not-italic text-cream/80 sm:text-base">{{ SHOP_ADDRESS }}</address>
