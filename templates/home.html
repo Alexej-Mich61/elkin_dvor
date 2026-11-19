@@ -186,7 +186,7 @@
         <!-- 5. Контакты: фон как у преимуществ (#1A472A), контент слева с отступом,
                телефон в декоративном кольце (как ссылка «Заказать»), клик — набор номера -->
         <section id="contacts" class="container mx-auto scroll-mt-24 bg-moss text-cream">
-            <div class="flex flex-col items-start gap-8 py-16 pl-8 text-left sm:pl-16">
+            <div class="flex flex-col items-start gap-8 pt-16 pb-4 pl-8 text-left sm:pl-16">
                 <a href="tel:{{ SHOP_PHONE_TEL }}" class="relative mb-6 inline-block leading-none transition hover:opacity-80">
                     <img src="{% static 'img/text-decor.png' %}" alt="" width="242" height="72" aria-hidden="true"
                          class="absolute left-1/2 top-1/2 h-auto max-w-none w-[min(270px,92vw)] -translate-x-1/2 -translate-y-1/2">
@@ -202,7 +202,12 @@
                         {% include 'includes/icon.html' with icon='max-solid' class_name='w-9 h-9' %}
                     </a>
                 </div>
-                <address class="text-sm font-semibold not-italic text-cream/80 sm:text-base">{{ SHOP_ADDRESS }}</address>
+                <!-- Адрес разбит на две строки; дублирует SHOP_ADDRESS
+                     в shop/context_processors.py -->
+                <address class="text-sm font-semibold not-italic text-cream/80 sm:text-base">
+                    г. Ростов-на-Дону,<br>
+                    ул. Таганрогская, 140/4
+                </address>
             </div>
         </section>
     </div>
