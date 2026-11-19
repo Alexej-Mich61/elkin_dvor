@@ -98,36 +98,41 @@
                                         aria-controls="panel-{{ category.slug }}"
                                         :aria-selected="activeTab === '{{ category.slug }}'"
                                         @click="activeTab = '{{ category.slug }}'"
-                                        class="pb-2 transition hover:text-primary"
-                                        :class="activeTab === '{{ category.slug }}' ? 'text-primary underline decoration-primary decoration-4 underline-offset-8' : 'text-base-content/30'">
+                                        class="relative pb-2 transition hover:text-primary"
+                                        :class="activeTab === '{{ category.slug }}' ? 'text-primary' : 'text-base-content/30'">
                                     {{ category.name|lower }}
+                                    <!-- Активная вкладка: линия-штрих вместо CSS-подчёркивания -->
+                                    <img src="{% static 'img/line.png' %}" alt="" width="138" height="17" aria-hidden="true"
+                                         class="absolute bottom-0 left-1/2 hidden h-auto w-full -translate-x-1/2"
+                                         :class="{ 'block!': activeTab === '{{ category.slug }}' }">
                                 </button>
                             {% endfor %}
-                        </div>
-                        <div class="hidden gap-2 md:flex" x-cloak>
-                            <button type="button" aria-label="Предыдущие товары"
-                                    class="btn btn-circle btn-outline btn-primary btn-sm"
-                                    @click="$refs['carousel-' + activeTab].scrollBy({ left: -300, behavior: 'smooth' })">
-                                {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
-                            </button>
-                            <button type="button" aria-label="Следующие товары"
-                                    class="btn btn-circle btn-outline btn-primary btn-sm"
-                                    @click="$refs['carousel-' + activeTab].scrollBy({ left: 300, behavior: 'smooth' })">
-                                {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
-                            </button>
                         </div>
                     </div>
 
                     {% for category in tree_categories %}
-                        <div id="panel-{{ category.slug }}" role="tabpanel" aria-labelledby="tab-{{ category.slug }}"
-                             x-show="activeTab === '{{ category.slug }}'"
-                             x-ref="carousel-{{ category.slug }}"
-                             class="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
-                            {% for product in category.products.all %}
-                                {% include 'partials/product_card.html' %}
-                            {% endfor %}
+                        <!-- x-show на всей обёртке: стрелки скрываются вместе с панелью -->
+                        <div class="relative" x-show="activeTab === '{{ category.slug }}'">
+                            <div id="panel-{{ category.slug }}" role="tabpanel" aria-labelledby="tab-{{ category.slug }}"
+                                 x-ref="carousel-{{ category.slug }}"
+                                 class="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-12 pb-4">
+                                {% for product in category.products.all %}
+                                    {% include 'partials/product_card.html' %}
+                                {% endfor %}
+                            </div>
+                            <!-- Стрелки сбоку карусели, по центру фото товара -->
+                            <button type="button" aria-label="Предыдущие товары"
+                                    class="btn btn-circle btn-outline btn-primary btn-sm absolute top-[140px] left-3 z-10 hidden -translate-y-1/2 md:inline-flex"
+                                    @click="$refs['carousel-' + activeTab].scrollBy({ left: -300, behavior: 'smooth' })">
+                                {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
+                            </button>
+                            <button type="button" aria-label="Следующие товары"
+                                    class="btn btn-circle btn-outline btn-primary btn-sm absolute top-[140px] right-3 z-10 hidden -translate-y-1/2 md:inline-flex"
+                                    @click="$refs['carousel-' + activeTab].scrollBy({ left: 300, behavior: 'smooth' })">
+                                {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
+                            </button>
                         </div>
-                        <p class="mt-1" x-show="activeTab === '{{ category.slug }}'">
+                        <p class="mt-1 px-12" x-show="activeTab === '{{ category.slug }}'">
                             <a href="{% url 'shop:category' category_slug=category.slug %}"
                                class="font-bold text-primary underline-offset-4 hover:underline">
                                 Все товары категории «{{ category.name }}» →
@@ -146,24 +151,25 @@
                         <h2 class="font-soyuz w-full text-center text-3xl font-black sm:text-4xl md:w-auto md:text-left">
                             популярные дополнения
                         </h2>
-                        <div class="hidden gap-2 md:flex" x-cloak>
-                            <button type="button" aria-label="Предыдущие дополнения"
-                                    class="btn btn-circle btn-outline btn-primary btn-sm"
-                                    @click="$refs.addonsCarousel.scrollBy({ left: -300, behavior: 'smooth' })">
-                                {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
-                            </button>
-                            <button type="button" aria-label="Следующие дополнения"
-                                    class="btn btn-circle btn-outline btn-primary btn-sm"
-                                    @click="$refs.addonsCarousel.scrollBy({ left: 300, behavior: 'smooth' })">
-                                {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
-                            </button>
-                        </div>
                     </div>
-                    <div x-ref="addonsCarousel"
-                         class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4">
-                        {% for product in addon_products %}
-                            {% include 'partials/product_card.html' %}
-                        {% endfor %}
+                    <div class="relative">
+                        <div x-ref="addonsCarousel"
+                             class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-12 pb-4">
+                            {% for product in addon_products %}
+                                {% include 'partials/product_card.html' %}
+                            {% endfor %}
+                        </div>
+                        <!-- Стрелки сбоку карусели, по центру фото товара -->
+                        <button type="button" aria-label="Предыдущие дополнения"
+                                class="btn btn-circle btn-outline btn-primary btn-sm absolute top-[140px] left-3 z-10 hidden -translate-y-1/2 md:inline-flex"
+                                @click="$refs.addonsCarousel.scrollBy({ left: -300, behavior: 'smooth' })">
+                            {% include 'includes/icon.html' with icon='chevron-left' class_name='w-5 h-5' %}
+                        </button>
+                        <button type="button" aria-label="Следующие дополнения"
+                                class="btn btn-circle btn-outline btn-primary btn-sm absolute top-[140px] right-3 z-10 hidden -translate-y-1/2 md:inline-flex"
+                                @click="$refs.addonsCarousel.scrollBy({ left: 300, behavior: 'smooth' })">
+                            {% include 'includes/icon.html' with icon='chevron-right' class_name='w-5 h-5' %}
+                        </button>
                     </div>
                 </div>
             </section>
