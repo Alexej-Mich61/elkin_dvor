@@ -23,12 +23,12 @@
                     {% with main_image=images.0 %}
                         <div x-data="{ active: '{{ main_image.image.url }}' }" class="self-start lg:sticky lg:top-6">
                             <img :src="active" src="{{ main_image.image.url }}" alt="{{ main_image.alt|default:product.name }}"
-                                 width="800" height="1000" class="aspect-[4/5] w-full rounded-2xl bg-base-200 object-cover">
+                                 width="800" height="1000" class="aspect-[4/5] w-full bg-base-200 object-cover lg:max-w-md">
                             {% if images|length > 1 %}
                                 <div class="mt-4 flex gap-3">
                                     {% for image in images %}
                                         <button type="button" @click="active='{{ image.image.url }}'"
-                                                class="overflow-hidden rounded-lg ring-2 ring-transparent transition hover:opacity-80 focus-visible:ring-primary"
+                                                class="overflow-hidden ring-2 ring-transparent transition hover:opacity-80 focus-visible:ring-primary"
                                                 aria-label="Показать фото {{ forloop.counter }}">
                                             <img src="{{ image.image.url }}" alt="" width="96" height="120" loading="lazy"
                                                  class="h-24 w-20 object-cover">
@@ -39,7 +39,7 @@
                         </div>
                     {% endwith %}
                 {% else %}
-                    <div class="aspect-[4/5] w-full grid place-items-center rounded-2xl bg-base-200 px-4 text-center font-semibold text-base-content/40">
+                    <div class="aspect-[4/5] w-full grid place-items-center bg-base-200 px-4 text-center font-semibold text-base-content/40">
                         Фото скоро появится
                     </div>
                 {% endif %}
