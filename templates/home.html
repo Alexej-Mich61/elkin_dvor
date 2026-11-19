@@ -12,17 +12,24 @@
         <section class="container mx-auto px-4 text-cream">
             <div>
                 <div class="grid lg:grid-cols-5 lg:items-start">
-                    <!-- Текстовый блок: на мобильном первым, на десктопе справа -->
-                    <div class="relative z-10 order-1 py-10 lg:order-2 lg:col-span-2 lg:pb-0 lg:pt-12 xl:pt-36">
+                    <!-- Текстовый блок: на мобильном первым, баннер на всю ширину,
+                           вплотную к фото снизу; на десктопе справа -->
+                    <div class="relative z-10 order-1 -mx-4 pt-10 pb-0 lg:order-2 lg:col-span-2 lg:mx-0 lg:pb-0 lg:pt-8 xl:pt-16">
                         <!-- right-28 сдвигает колонку влево без изменения ширины:
                              баннер сильнее заезжает на фото и получает отступ справа -->
                         <div class="flex flex-col items-center lg:relative lg:right-28">
-                            <!-- Десктоп: ссылка на каталог с декоративным кольцом -->
-                            <a href="#catalog" class="relative mb-12 hidden leading-none lg:inline-block">
-                                <img src="{% static 'img/text-decor.png' %}" alt="" width="242" height="72" aria-hidden="true"
-                                     class="absolute left-1/2 top-1/2 h-auto max-w-none w-[240px] -translate-x-1/2 -translate-y-1/2">
-                                <span class="relative text-4xl font-bold">Заказать</span>
-                            </a>
+                            <!-- На мобильном display:contents — слоган на всю ширину экрана;
+                                 на десктопе колонка шириной с кольцо (240px): левые края
+                                 надписи и кольца совпадают. Ширину менять в двух местах -->
+                            <div class="contents text-center lg:block lg:w-[240px]">
+                                <p class="font-marck mb-6 text-center text-3xl sm:text-4xl lg:-mt-10 lg:mb-16 lg:whitespace-nowrap lg:text-left">Привезем домой бесплатно!</p>
+                                <!-- Десктоп: ссылка на каталог с декоративным кольцом -->
+                                <a href="#catalog" class="relative mb-12 hidden leading-none lg:inline-block">
+                                    <img src="{% static 'img/text-decor.png' %}" alt="" width="242" height="72" aria-hidden="true"
+                                         class="absolute left-1/2 top-1/2 h-auto max-w-none w-[240px] -translate-x-1/2 -translate-y-1/2">
+                                    <span class="relative text-4xl font-bold">Выбрать</span>
+                                </a>
+                            </div>
                             <div class="w-full bg-wine px-6 py-8 text-white shadow-2xl sm:px-10 sm:py-10">
                                 <h1 class="font-soyuz text-4xl font-black leading-[1.05] sm:text-5xl lg:text-6xl">
                                     Живые ёлки, сосны и&nbsp;пихты
@@ -35,8 +42,9 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Фото ёлки: на десктопе портретное слева, на мобильном — панорамное -->
-                    <div class="relative order-2 lg:order-1 lg:col-span-3 lg:-ml-4">
+                    <!-- Фото ёлки: на мобильном панорамное на всю ширину, вплотную к баннеру;
+                         на десктопе портретное слева -->
+                    <div class="relative order-2 -mx-4 lg:order-1 lg:col-span-3 lg:mx-0 lg:-ml-4">
                         <picture>
                             <source media="(min-width: 1024px)" srcset="{% static 'img/hero-tree.webp' %}">
                             <img src="{% static 'img/hero-tree-wide.webp' %}" alt="Наряженная живая ёлка с подарками у камина в гостиной"

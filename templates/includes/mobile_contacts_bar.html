@@ -1,13 +1,12 @@
 {% comment %}
-  Плавающая панель связи для мобильных: Telegram, звонок, MAX.
-  Стеклянная «таблетка» в нижнем правом углу.
-  На десктопе контакты уже есть в шапке и подвале.
+  Плавающая панель связи: Telegram, звонок, MAX.
+  Стеклянная «таблетка» в нижнем правом углу — на всех экранах.
   z-40 (а не 50): чтобы панель уходила ПОД боковое меню, у которого z-50.
 {% endcomment %}
 <div class="w-[180px] min-h-[56px] fixed bottom-0 left-3/4 -translate-x-1/2
             mb-4 rounded-[27.5px] border border-frost/20
             bg-pine-dark/60 shadow-lg backdrop-blur-[4px] px-4 py-3
-            flex justify-between items-center gap-[10px] z-40 md:hidden"
+            flex justify-between items-center gap-[10px] z-40"
      role="toolbar" aria-label="Быстрые контакты">
 
     <!-- Telegram -->
