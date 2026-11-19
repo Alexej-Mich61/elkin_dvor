@@ -41,9 +41,9 @@
   `manage.py shell -c "exec(compile(open('scripts/x.py', encoding='utf-8').read(), 'x.py', 'exec'))"`.
 - Нормализация промокода — только trim + верхний регистр: «Ё» и «Е» считаются
   разными символами, код «ЁЛКА10» не совпадёт с «ЕЛКА10».
-- Контакты (телефон, Telegram/WhatsApp, адрес) живут в константе `SHOP_CONTACTS`
+- Контакты (телефон, Telegram/MAX, адрес) живут в константе `SHOP_CONTACTS`
   в `shop/context_processors.py` (её же используют письма из `orders/emails.py`);
-  ссылка Telegram — заглушка `https://t.me/elkin_dvor`, заменить на реальную.
+  ссылки Telegram и MAX (`SHOP_MAX_URL`) — заглушки, заменить на реальные.
 - `send_emails.bat` включает `chcp 65001` и `PYTHONUTF8=1`: без этого console
   backend может упасть с `[Errno 22] Invalid argument` при выводе кириллицы
   в чужую консоль/лог планировщика — письмо тогда уйдёт в повтор, а не в sent.

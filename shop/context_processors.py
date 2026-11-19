@@ -10,7 +10,8 @@ SHOP_CONTACTS = {
     "SHOP_PHONE_TEL": "+79185843434",
     # TODO: заменить на реальный адрес Telegram-канала или бота магазина.
     "SHOP_TELEGRAM_URL": "https://t.me/elkin_dvor",
-    "SHOP_WHATSAPP_URL": "https://wa.me/79185843434",
+    # TODO: заменить заглушку на реальный код профиля MAX.
+    "SHOP_MAX_URL": "https://max.ru/u/ваш-код-профиля",
     "SHOP_ADDRESS": "г. Ростов-на-Дону, ул. Таганрогская, 140/4",
 }
 
