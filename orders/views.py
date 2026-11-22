@@ -50,7 +50,12 @@ def checkout(request):
                 order = create_order(
                     lines=cart.items.items(),
                     promo_code=cart.promo_code,
-                    **form.cleaned_data,
+                    # Согласие в заказ не передаём — это подтверждение формы,
+                    # а не данные заказа.
+                    **{
+                        key: form.cleaned_data[key]
+                        for key in ("name", "phone", "email", "address", "note")
+                    },
                 )
             except CheckoutError:
                 messages.error(

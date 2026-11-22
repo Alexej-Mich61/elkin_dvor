@@ -303,3 +303,31 @@ class PublicCatalogTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Sitemap:")
         self.assertContains(response, "/admin/", html=False)
+
+
+class LegalPagesTests(TestCase):
+    """Юридические страницы: уведомление о cookies (ФЗ-152/420) и политики."""
+
+    def test_privacy_page_public(self):
+        response = self.client.get(reverse("shop:privacy"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Политика конфиденциальности")
+        self.assertContains(response, "cookies")
+
+    def test_personal_data_page_public(self):
+        response = self.client.get(reverse("shop:personal_data"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Политика обработки персональных данных")
+        # Ключевое требование: трансграничная передача не осуществляется.
+        self.assertContains(response, "Трансграничная передача не осуществляется")
+
+    def test_home_contains_cookie_banner(self):
+        response = self.client.get(reverse("shop:home"))
+
+        # Баннер подключён в base.html и показывается до выбора пользователя...
+        self.assertContains(response, 'id="cookie-banner"')
+        # ...обе кнопки одинакового размера (btn без size-модификаторов)...
+        self.assertContains(response, "Принять")
+        self.assertContains(response, "Отказаться")
+        # ...и в тексте есть ссылка на политику конфиденциальности.
+        self.assertContains(response, reverse("shop:privacy"))

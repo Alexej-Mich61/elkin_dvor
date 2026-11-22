@@ -7,6 +7,8 @@
 - `/catalog/<category_slug>/` — `shop.views.category_detail`, name=`shop:category`.
 - `/catalog/<category_slug>/<product_slug>/` — `shop.views.product_detail`, name=`shop:product`.
 - `/catalog/<category_slug>/<product_slug>/price/?variant=<id>` — HTMX-фрагмент цены, name=`shop:variant_price`.
+- `/privacy/` — политика конфиденциальности (TemplateView), name=`shop:privacy`.
+- `/personal-data/` — политика обработки персональных данных (TemplateView), name=`shop:personal_data`.
 - `/cart/` — страница корзины, name=`cart:detail`.
 - `/cart/add/` — добавление в корзину (POST), name=`cart:add`.
 - `/cart/update/<variant_id>/` — изменение количества (POST, quantity в value кнопки «−»/«+»), name=`cart:update`.

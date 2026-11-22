@@ -248,7 +248,7 @@ class CheckoutFormTests(TestCase):
     def test_required_fields(self):
         form = CheckoutForm(data={})
         self.assertFalse(form.is_valid())
-        for field in ("name", "phone", "address"):
+        for field in ("name", "phone", "address", "consent"):
             self.assertIn(field, form.errors)
         # Email и примечание необязательны.
         self.assertNotIn("email", form.errors)
@@ -265,13 +265,13 @@ class CheckoutFormTests(TestCase):
         self.assertIn("phone", form.errors)
 
     def test_phone_with_brackets_and_dashes_accepted(self):
-        form = CheckoutForm(data={**CONTACT, "phone": "8 (918) 123-45-67"})
+        form = CheckoutForm(data={**CONTACT, "phone": "8 (918) 123-45-67", "consent": True})
         self.assertTrue(form.is_valid(), form.errors)
         # В заказ уходит введённый вид, нормализация — только для поиска.
         self.assertEqual(form.cleaned_data["phone"], "8 (918) 123-45-67")
 
     def test_email_optional_and_normalized(self):
-        form = CheckoutForm(data={**CONTACT, "email": "  User@Example.com "})
+        form = CheckoutForm(data={**CONTACT, "email": "  User@Example.com ", "consent": True})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["email"], "user@example.com")
 
@@ -446,6 +446,8 @@ class CheckoutViewTests(TestCase):
             "email": "",
             "address": "ул. Таганрогская, 140/4, кв. 12",
             "note": "После 18:00",
+            # Согласие на обработку персональных данных (152-ФЗ).
+            "consent": "on",
         }
         payload.update(data or {})
         return self.client.post(reverse("orders:checkout"), data=payload)
@@ -460,6 +462,10 @@ class CheckoutViewTests(TestCase):
         self.assertContains(response, 'name="email"')
         self.assertContains(response, 'name="address"')
         self.assertContains(response, 'name="note"')
+        # Галочка согласия на обработку персональных данных обязательна
+        # и ведёт на страницу политики.
+        self.assertContains(response, 'name="consent"')
+        self.assertContains(response, reverse("shop:personal_data"))
         # Обязательные поля помечены звёздочкой, у полей есть текст-помощник.
         self.assertContains(response, 'aria-hidden="true">*</span>')
         self.assertContains(response, "Позвоним, чтобы подтвердить заказ")
@@ -519,6 +525,17 @@ class CheckoutViewTests(TestCase):
         # Введённые ранее данные не исчезли.
         self.assertContains(response, CONTACT["address"])
         self.assertContains(response, "не-email")
+        self.assertEqual(Order.objects.count(), 0)
+        self.assertEqual(Customer.objects.count(), 0)
+
+    def test_checkout_without_consent_rejected(self):
+        # Без согласия на обработку персональных данных заказ не создаётся:
+        # форма возвращается с пояснением, заказ и покупатель не появляются.
+        self.add_to_session_cart()
+        self.open_checkout()
+        response = self.post_checkout(data={"consent": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "согласие на обработку персональных данных")
         self.assertEqual(Order.objects.count(), 0)
         self.assertEqual(Customer.objects.count(), 0)
 

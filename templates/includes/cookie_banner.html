@@ -1,0 +1,58 @@
+{% comment %}
+  Уведомление об использовании cookies (требования ФЗ-152 в редакции ФЗ-420):
+  1) показывается сразу при первом визите, до любых действий пользователя;
+  2) кнопки «Принять» и «Отказаться» одинакового размера и заметности;
+  3) в тексте — ссылка на политику конфиденциальности;
+  4) выбор запоминается в localStorage (техническая запись, согласие не нужно);
+  5) аналитические счётчики подключаются только после согласия (loadAnalytics).
+  x-cloak (правило есть в styles.css) не даёт баннеру мигать до инициализации Alpine.
+{% endcomment %}
+<div id="cookie-banner" x-data="cookieBanner()" x-init="init()" x-show="visible" x-cloak
+     role="region" aria-label="Уведомление об использовании cookies"
+     class="fixed inset-x-0 bottom-0 z-40 border-t-2 border-primary bg-frost shadow-[0_-4px_16px_rgba(0,0,0,0.15)]">
+    <div class="container mx-auto flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p class="max-w-3xl text-sm leading-relaxed text-base-content">
+            Мы используем cookies, чтобы сайт работал корректно (корзина, оформление заказа),
+            и для статистики посещений. Подробности — в
+            <a href="{% url 'shop:privacy' %}"
+               class="font-bold text-primary underline-offset-4 hover:underline">политике конфиденциальности</a>.
+            Вы можете принять или отклонить использование cookies — мы запомним ваш выбор.
+        </p>
+        <div class="grid shrink-0 grid-cols-2 gap-3 sm:w-64">
+            <button type="button" class="btn btn-primary" @click="accept()">Принять</button>
+            <button type="button" class="btn btn-outline btn-primary" @click="reject()">Отказаться</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* Согласие на cookies: баннер показываем, пока в localStorage нет записи
+       cookie_consent. Повторно баннер не появляется после любого из выборов. */
+    window.cookieBanner = function () {
+        return {
+            visible: false,
+            init() {
+                const consent = localStorage.getItem('cookie_consent');
+                if (!consent) {
+                    this.visible = true;
+                } else if (consent === 'accepted') {
+                    loadAnalytics();
+                }
+            },
+            accept() {
+                localStorage.setItem('cookie_consent', 'accepted');
+                this.visible = false;
+                loadAnalytics();
+            },
+            reject() {
+                localStorage.setItem('cookie_consent', 'rejected');
+                this.visible = false;
+            },
+        };
+    };
+
+    /* Аналитические счётчики (Яндекс Метрика и т.п.) загружаются ТОЛЬКО после
+       согласия пользователя — инициализацию счётчика добавлять сюда.
+       До согласия на сайте не должно быть ни одного запроса к счётчикам. */
+    function loadAnalytics() {}
+</script>

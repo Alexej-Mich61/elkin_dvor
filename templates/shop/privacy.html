@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Политика конфиденциальности и использования cookies | Ёлкин двор{% endblock %}
+{% block meta_description %}Какие cookies использует сайт «Ёлкин двор», зачем они нужны и как отозвать согласие на их использование.{% endblock %}
+
+{% block content %}
+    <div class="bg-pine-deep text-cream">
+        <div class="container mx-auto px-4 py-10">
+            <nav aria-label="Хлебные крошки" class="text-sm text-cream/70">
+                <ol class="flex flex-wrap items-center gap-2">
+                    <li><a href="{% url 'shop:home' %}" class="hover:text-cream">Главная</a></li>
+                    <li aria-hidden="true">/</li>
+                    <li aria-current="page" class="font-bold text-cream">Политика конфиденциальности</li>
+                </ol>
+            </nav>
+            <h1 class="font-soyuz mt-4 text-4xl font-black sm:text-5xl">Политика конфиденциальности</h1>
+            <p class="mt-3 max-w-2xl text-cream/80">Какие данные сохраняет сайт в вашем браузере и зачем.</p>
+        </div>
+    </div>
+
+    <section class="bg-base-100">
+        <div class="container mx-auto max-w-3xl px-4 py-10 leading-relaxed">
+            <h2 class="font-soyuz text-2xl font-black">Что такое cookies</h2>
+            <p class="mt-3 text-base-content/80">
+                Cookies — небольшие текстовые файлы, которые сайт сохраняет в браузере.
+                Они нужны, чтобы сайт работал: помнил вашу корзину, защищал формы от подделки
+                и не спрашивал согласие на cookies при каждом визите.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">Какие файлы использует этот сайт</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base-content/80">
+                <li>
+                    <strong>Сессионная cookie Django</strong> — идентификатор сессии. Позволяет хранить
+                    корзину и оформленный заказ между страницами. Это техническая cookie:
+                    без неё оформить заказ невозможно.
+                </li>
+                <li>
+                    <strong>Cookie CSRF-токена</strong> — защита форм (корзина, оформление заказа)
+                    от подделки межсайтовых запросов. Также техническая.
+                </li>
+                <li>
+                    <strong>Запись согласия в localStorage</strong> — сохраняет ваш выбор
+                    («принять» или «отказаться») в браузере, чтобы уведомление не показывалось повторно.
+                    Не содержит персональных данных.
+                </li>
+            </ul>
+            <p class="mt-3 text-base-content/80">
+                Технические cookies не используются для рекламы и профилирования и работают
+                независимо от вашего согласия.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">Статистика посещений</h2>
+            <p class="mt-3 text-base-content/80">
+                Для анализа посещаемости сайт может подключать счётчик Яндекс Метрики.
+                Он загружается <strong>только после того</strong>, как вы нажмёте «Принять»
+                в уведомлении о cookies. Если вы нажали «Отказаться» или не дали согласие,
+                счётчик не загружается и данные о посещении никуда не отправляются.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">Как изменить или отозвать согласие</h2>
+            <p class="mt-3 text-base-content/80">
+                Выбор хранится в вашем браузере, поэтому отозвать его можно только там:
+                удалите данные сайта (cookies и локальное хранилище) в настройках браузера —
+                уведомление появится снова при следующем визите. Пока согласие не дано
+                или отозвано, статистика не собирается.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">Передача данных третьим лицам</h2>
+            <p class="mt-3 text-base-content/80">
+                Cookies и данные статистики не продаются и не передаются третьим лицам
+                в рекламных целях.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">Контакты</h2>
+            <p class="mt-3 text-base-content/80">
+                По вопросам, связанным с обработкой данных, свяжитесь с нами:
+                телефон <a href="tel:{{ SHOP_PHONE_TEL }}" class="font-bold text-primary underline-offset-4 hover:underline">{{ SHOP_PHONE_DISPLAY }}</a>,
+                адрес: {{ SHOP_ADDRESS }}.
+            </p>
+        </div>
+    </section>
+{% endblock %}

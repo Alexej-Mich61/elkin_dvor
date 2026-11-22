@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Политика обработки персональных данных | Ёлкин двор{% endblock %}
+{% block meta_description %}Политика обработки персональных данных сайта «Ёлкин двор» в соответствии с Федеральным законом № 152-ФЗ.{% endblock %}
+
+{% block content %}
+    <div class="bg-pine-deep text-cream">
+        <div class="container mx-auto px-4 py-10">
+            <nav aria-label="Хлебные крошки" class="text-sm text-cream/70">
+                <ol class="flex flex-wrap items-center gap-2">
+                    <li><a href="{% url 'shop:home' %}" class="hover:text-cream">Главная</a></li>
+                    <li aria-hidden="true">/</li>
+                    <li aria-current="page" class="font-bold text-cream">Политика обработки персональных данных</li>
+                </ol>
+            </nav>
+            <h1 class="font-soyuz mt-4 text-4xl font-black sm:text-5xl">Политика обработки персональных данных</h1>
+            <p class="mt-3 max-w-2xl text-cream/80">Сайт «Ёлкин двор» — живые новогодние деревья в Ростове-на-Дону.</p>
+        </div>
+    </div>
+
+    <section class="bg-base-100">
+        <div class="container mx-auto max-w-3xl px-4 py-10 leading-relaxed">
+            <p class="text-sm font-semibold text-base-content/60">Дата актуализации: [ДД.ММ.ГГГГ]</p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">1. Общие положения</h2>
+            <p class="mt-3 text-base-content/80">
+                Настоящая Политика обработки персональных данных составлена в соответствии
+                с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».
+            </p>
+            <p class="mt-3 text-base-content/80">
+                Оператор: [ИП/ООО «НАЗВАНИЕ»], ИНН [XXX], ОГРН [XXX], юридический адрес [XXX].<br>
+                Запись в реестре операторов Роскомнадзора: № [XX-XX-XXXXXXX].<br>
+                Контактный email ответственного за обработку: [email]
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">2. Цели обработки</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base-content/80">
+                <li>связь с клиентом для подтверждения заказа и доставки;</li>
+                <li>оформление, исполнение и доставка заказов;</li>
+                <li>выполнение обязательств по договорам купли-продажи;</li>
+                <li>информирование клиента о статусе заказа.</li>
+            </ul>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">3. Правовое основание</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base-content/80">
+                <li>согласие субъекта (форма оформления заказа);</li>
+                <li>исполнение договора (при оформлении заказа в интернет-магазине);</li>
+                <li>требование закона (ведение бухгалтерской и налоговой отчётности).</li>
+            </ul>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">4. Категории субъектов</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base-content/80">
+                <li>посетители сайта;</li>
+                <li>клиенты, оставившие заявку или сделавшие заказ;</li>
+                <li>контрагенты.</li>
+            </ul>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">5. Перечень данных</h2>
+            <p class="mt-3 text-base-content/80">Формы сайта собирают следующие данные:</p>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base-content/80">
+                <li>имя;</li>
+                <li>номер телефона;</li>
+                <li>адрес электронной почты (необязательно);</li>
+                <li>адрес доставки;</li>
+                <li>примечание к заказу (необязательно).</li>
+            </ul>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">6. Способы обработки</h2>
+            <p class="mt-3 text-base-content/80">
+                Сбор, систематизация, накопление, хранение, уточнение, использование,
+                передача (включая трансграничную), обезличивание, блокирование,
+                удаление, уничтожение.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">7. Сроки хранения</h2>
+            <p class="mt-3 text-base-content/80">
+                До достижения целей обработки или до отзыва согласия, но не более:
+            </p>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base-content/80">
+                <li>для маркетинговых данных — 3 года;</li>
+                <li>для финансовой документации — 5 лет (требование НК РФ).</li>
+            </ul>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">8. Передача третьим лицам</h2>
+            <p class="mt-3 text-base-content/80">
+                Передача данных осуществляется следующим третьим лицам:
+            </p>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base-content/80">
+                <li>[платформа сайта] — для хранения базы данных сайта (Российская Федерация);</li>
+                <li>[платёжный сервис] — для приёма платежей;</li>
+                <li>[курьерская служба] — для доставки заказов;</li>
+                <li>[email-сервис] — для отправки уведомлений;</li>
+                <li>ООО «Яндекс» (через сервис Яндекс Метрика) — для аналитики.</li>
+            </ul>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">9. Безопасность</h2>
+            <p class="mt-3 text-base-content/80">
+                Технические меры: парольная защита, HTTPS, антивирус.
+                Организационные меры: разграничение доступа сотрудников,
+                регулярное копирование.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">10. Трансграничная передача</h2>
+            <p class="mt-3 text-base-content/80">
+                Трансграничная передача не осуществляется.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">11. Контакт ответственного</h2>
+            <p class="mt-3 text-base-content/80">
+                [ФИО], email: [email]
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">12. Запросы субъектов</h2>
+            <p class="mt-3 text-base-content/80">
+                Запросы об обработке, изменении или удалении данных принимаются
+                по email: [email]. Срок ответа — 30 дней.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">13. Уничтожение данных</h2>
+            <p class="mt-3 text-base-content/80">
+                По истечении срока хранения или по запросу субъекта данные удаляются
+                из всех систем оператора с подтверждением.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">14. Изменения в политике</h2>
+            <p class="mt-3 text-base-content/80">
+                Изменения публикуются на этой странице. Дата актуализации указывается
+                в начале документа.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">15. Обезличивание</h2>
+            <p class="mt-3 text-base-content/80">
+                Обезличивание данных применяется при формировании статистических отчётов.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">16. Автоматизированная обработка</h2>
+            <p class="mt-3 text-base-content/80">
+                Автоматическое принятие юридически значимых решений на основе
+                обработки персональных данных не осуществляется.
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">17. Ответственность</h2>
+            <p class="mt-3 text-base-content/80">
+                Оператор несёт ответственность за нарушение законодательства
+                Российской Федерации о персональных данных в соответствии
+                с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».
+            </p>
+
+            <h2 class="font-soyuz mt-8 text-2xl font-black">Контакты</h2>
+            <p class="mt-3 text-base-content/80">
+                По вопросам обработки персональных данных свяжитесь с нами:
+                телефон <a href="tel:{{ SHOP_PHONE_TEL }}" class="font-bold text-primary underline-offset-4 hover:underline">{{ SHOP_PHONE_DISPLAY }}</a>,
+                адрес: {{ SHOP_ADDRESS }}.
+            </p>
+        </div>
+    </section>
+{% endblock %}

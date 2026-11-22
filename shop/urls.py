@@ -1,4 +1,5 @@
 from django.urls import path, register_converter
+from django.views.generic import TemplateView
 
 from . import views
 
@@ -29,5 +30,17 @@ urlpatterns = [
         "catalog/<uslug:category_slug>/<uslug:product_slug>/price/",
         views.variant_price,
         name="variant_price",
+    ),
+    # Политика конфиденциальности (ссылка из уведомления о cookies).
+    path(
+        "privacy/",
+        TemplateView.as_view(template_name="shop/privacy.html"),
+        name="privacy",
+    ),
+    # Политика обработки персональных данных (ссылка из формы заказа).
+    path(
+        "personal-data/",
+        TemplateView.as_view(template_name="shop/personal_data.html"),
+        name="personal_data",
     ),
 ]

@@ -86,6 +86,8 @@
     1536px на 2xl+, не растягиваются на весь экран); заголовки — `font-soyuz`;
     карточки товаров в каруселях — w-52 sm:w-56;
   - `shop/category.html`, `shop/product.html` — страницы категории и товара (галерея Alpine, выбор размера с HTMX-ценой, JSON-LD);
+  - `shop/privacy.html` — политика конфиденциальности (страница из уведомления о cookies, `/privacy/`);
+  - `shop/personal_data.html` — политика обработки персональных данных (ссылка из формы заказа, `/personal-data/`);
   - `orders/checkout.html` — форма оформления (звёздочки обязательных полей,
     текст-помощники, сводка заказа); `orders/order_success.html` — подтверждение
     с номером, составом, итогами, кнопкой «Скачать» (JSON заказа для canvas);
@@ -103,7 +105,9 @@
     справа для staff (Alpine, z-50), `footer.html`,
     `icon.html` — контурные SVG-иконки + варианты с суффиксом `-solid`
     (залитые, в стилистике иконок плавающей панели, для шапки),
-    `mobile_contacts_bar.html` — плавающая панель связи на мобильных);
+    `mobile_contacts_bar.html` — плавающая панель связи на мобильных,
+    `cookie_banner.html` — уведомление о cookies (ФЗ-152/420; Alpine,
+    согласие в localStorage, счётчики аналитики — только после согласия));
   - `partials/` — HTMX-фрагменты и карточка товара (`product_card.html`, `variant_price.html`);
   - `robots.txt` — отдаётся через TemplateView с `text/plain`.
 - `static/` — глобальная статика:

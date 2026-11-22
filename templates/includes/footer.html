@@ -1,6 +1,12 @@
 <footer class="bg-pine-deep text-cream/70">
     <div class="container mx-auto px-4 py-5 flex flex-col items-center justify-between gap-2 text-center text-sm sm:flex-row sm:text-left">
         <p>© {% now "Y" %} {{ SHOP_NAME }} — живые новогодние деревья в Ростове-на-Дону</p>
-        <p>Бесплатная доставка · Оплата при получении</p>
+        <p class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:justify-end">
+            <span>Бесплатная доставка · Оплата при получении</span>
+            <a href="{% url 'shop:personal_data' %}"
+               class="underline-offset-4 transition hover:text-cream hover:underline">Политика обработки персональных данных</a>
+            <a href="{% url 'shop:privacy' %}"
+               class="underline-offset-4 transition hover:text-cream hover:underline">Политика конфиденциальности</a>
+        </p>
     </div>
 </footer>

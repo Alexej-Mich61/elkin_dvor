@@ -103,6 +103,29 @@
                             <p class="mt-1 text-sm text-base-content/60">{{ form.note.field.help_text }}</p>
                         {% endif %}
                     </div>
+
+                    <!-- Согласие на обработку персональных данных (152-ФЗ):
+                         сервер не примет форму без отмеченной галочки. -->
+                    <div>
+                        <div class="flex items-start gap-3">
+                            <input type="checkbox" id="id_consent" name="consent" required
+                                   {% if form.consent.value %}checked{% endif %}
+                                   aria-invalid="{% if form.consent.errors %}true{% else %}false{% endif %}"
+                                   class="checkbox checkbox-primary mt-0.5 shrink-0{% if form.consent.errors %} checkbox-error{% endif %}">
+                            <p class="text-sm leading-relaxed text-base-content/80">
+                                <label for="id_consent" class="cursor-pointer font-semibold text-base-content">
+                                    Я согласен(а) на обработку моих персональных данных
+                                </label>
+                                <a href="{% url 'shop:personal_data' %}"
+                                   class="font-bold text-primary underline-offset-4 hover:underline">
+                                    согласно политике обработки персональных данных
+                                </a>.
+                            </p>
+                        </div>
+                        {% if form.consent.errors %}
+                            <p class="mt-1 text-sm font-semibold text-error">{{ form.consent.errors.0 }}</p>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <p class="mt-4 text-sm font-semibold text-base-content/60">
