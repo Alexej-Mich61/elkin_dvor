@@ -2,7 +2,8 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.test import TestCase
+from django.template.loader import render_to_string
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import Category, Product, ProductImage, ProductVariant
@@ -331,3 +332,22 @@ class LegalPagesTests(TestCase):
         self.assertContains(response, "Отказаться")
         # ...и в тексте есть ссылка на политику конфиденциальности.
         self.assertContains(response, reverse("shop:privacy"))
+
+
+class ErrorPagesTests(TestCase):
+    """Страницы ошибок подхватываются в production-режиме (DEBUG=False)."""
+
+    @override_settings(DEBUG=False)
+    def test_custom_404_page(self):
+        # В production несуществующий URL отдаёт наш 404.html, а не technical 404.
+        response = self.client.get("/такой-страницы-нет/")
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "Такой страницы нет", status_code=404)
+        self.assertContains(response, reverse("shop:home"), status_code=404)
+
+    def test_error_templates_render(self):
+        # Все шаблоны ошибок собираются; 500.html автономен и рендерится
+        # без запроса и контекст-процессоров.
+        for template_name in ("404.html", "403.html", "500.html"):
+            html = render_to_string(template_name)
+            self.assertIn("Ёлкин двор", html)

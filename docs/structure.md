@@ -109,6 +109,9 @@
     `cookie_banner.html` — уведомление о cookies (ФЗ-152/420; Alpine,
     согласие в localStorage, счётчики аналитики — только после согласия));
   - `partials/` — HTMX-фрагменты и карточка товара (`product_card.html`, `variant_price.html`);
+  - `404.html`, `403.html` — страницы ошибок на базе `base.html`; `500.html` —
+    автономный (без `base.html` и контекст-процессоров, чтобы собираться при
+    реальном сбое); подхватываются стандартными обработчиками при `DEBUG=False`;
   - `robots.txt` — отдаётся через TemplateView с `text/plain`.
 - `static/` — глобальная статика:
   - `img/` — фирменные изображения (логотип `logo_elkin_dvor.png`, хиро-ёлки `hero-tree*.webp`);

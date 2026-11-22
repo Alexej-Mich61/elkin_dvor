@@ -1,0 +1,29 @@
+{% load tailwind_tags static %}
+<!DOCTYPE html>
+<!-- Автономный шаблон: при реальной ошибке сервера (500) нельзя полагаться
+     на base.html и контекст-процессоры — они могут быть причиной сбоя. -->
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ошибка сервера — 500 | Ёлкин двор</title>
+    <meta name="robots" content="noindex, follow">
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    {% tailwind_css %}
+</head>
+<body class="flex min-h-screen flex-col bg-base-100 font-sans text-base-content">
+    <main class="flex flex-1 items-center justify-center px-4 py-16">
+        <div class="text-center">
+            <p class="font-soyuz text-7xl font-black text-primary sm:text-8xl">500</p>
+            <h1 class="font-soyuz mt-4 text-3xl font-black sm:text-4xl">Что-то пошло не так</h1>
+            <p class="mx-auto mt-4 max-w-md text-base-content/70">
+                На сервере возникла ошибка. Попробуйте обновить страницу через минуту —
+                а если срочно, позвоните: поможем оформить заказ по телефону.
+            </p>
+            <div class="mt-8 flex flex-wrap justify-center gap-3">
+                <a href="{% url 'shop:home' %}" class="btn btn-primary">На главную</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
