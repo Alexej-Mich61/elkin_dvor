@@ -333,6 +333,16 @@ class LegalPagesTests(TestCase):
         # ...и в тексте есть ссылка на политику конфиденциальности.
         self.assertContains(response, reverse("shop:privacy"))
 
+    def test_yandex_metrika_wired_behind_consent(self):
+        # Счётчик Яндекс Метрики встроен в механизм согласия: его код есть
+        # на странице (внутри loadAnalytics), но выполняется он только после
+        # «Принять» — до согласия запросов к mc.yandex.ru быть не должно.
+        response = self.client.get(reverse("shop:home"))
+        self.assertContains(response, "mc.yandex.ru/metrika/tag.js?id=114602242")
+        self.assertContains(response, "ym(114602242, 'init'")
+        # Двойной вызов подряд не должен повторно инициализировать счётчик.
+        self.assertContains(response, "analyticsLoaded")
+
 
 class ErrorPagesTests(TestCase):
     """Страницы ошибок подхватываются в production-режиме (DEBUG=False)."""
